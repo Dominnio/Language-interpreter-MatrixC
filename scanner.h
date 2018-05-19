@@ -9,56 +9,54 @@
 #include <cstring>
 #include <iostream>
 #include <iomanip>
-#include "src.h"
+#include "source.h"
 
 #define MAXIDLEN 50
 
-enum SymType // Atomy leksykalne Mini Pascal'a
+enum SymType // Atomy leksykalne
 {
-    mainsy, // 0
-    functionsy, // 1
-    matrixsy, // 2
-    intsy, // 3
-    returnsy, // 4
-    whilesy,  // 5
-    breaksy,  // 6
-    continuesy,  // 7
-    ifsy, // 8
-    elsesy, // 9
-    publicsy, // 10
-    privatesy, //11 // Keywords
-    NKEYS, // 12
-    MAXKEY=privatesy, // 11
-    ident, // 12
-    intconst, //13
-    times, // 14
-    divop, // 15
-    plusop, // 16
-    minusop, // 17
-    ltop, // 18
-    leop, // 19
-    gtop, // 20
-    geop, // 21
-    neop, // 22
-    eqop, // 23
-    lparent, // 24
-    rparent, // 25
-    lbracket, // 26
-    rbracket, // 27
-    semicolon, // 28
-    colon, // 29
-    becomes, // 30
-    notop, // 31
-    andop, // 32
-    orop, // 33
-    raccessop, // 34
-    laccessop, // 35
-    comma, // 36
-    others, // 37
-    MAXSYM=others+1 // 38
+    functionsy,
+    matrixsy,
+    intsy,
+    returnsy,
+    whilesy,
+    ifsy,
+    elsesy,
+    publicsy,
+    privatesy,  // Keywords
+    NKEYS,
+    MAXKEY=privatesy,
+    ident,
+    intconst,
+    times,
+    divop,
+    plusop,
+    minusop,
+    ltop,
+    leop,
+    gtop,
+    geop,
+    neop,
+    eqop,
+    lparent,
+    rparent,
+    lbracket,
+    rbracket,
+    semicolon,
+    colon,
+    becomes,
+    notop,
+    andop,
+    orop,
+    laccessop,
+    raccessop,
+    comma,
+    others,
+    EndOfFile,
+    MAXSYM=others+1,
 };
 
-enum ScanErrors{ INTCONST2BIG=1, IDENTIFIER2LONG};
+enum ScanErrors{ INTCONST2BIG=1, IDENTIFIER2LONG, NOTRECOGNISED};
 
 class Scan
 {
@@ -74,6 +72,7 @@ class Scan
     int intconstant; // Ostatnia stala
     char spell[MAXIDLEN+1];// Ostatni ident, przeliterowany
     void Nextc() { c=src.NextChar(); }
+    bool SkipWhiteSpaceOrComment();
     static unsigned hash(char *s, unsigned int len);
     // Funkcja mieszajaca dla KT
 public:

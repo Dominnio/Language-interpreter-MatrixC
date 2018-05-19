@@ -4,24 +4,32 @@
 
 #include "scanner.h"
 
-typedef // Implementacja klasy Scan.
-const char *AT[MAXSYM + 1];
+/*
+ * Główny moduł leksera.
+ * Interpretuje symbole, pryzpisuje im tokeny.
+ */
+const char *AT[MAXSYM + 1] =
+        {
+            "function", "matrix", "int", "return", "while",
+            "if", "else", "public",
+            "private", "ident", "intconst",
+            "*", "/", "+", "-", "<", "<=", ">", ">=", "!=", "=",
+            "(", ")", "{", "}", ";", ":", ":=", "!", "&", "|", "[", "]", ",", "others", "EndOfFile"
+        };
+
 
 Scan::KeyRec Scan::KT[NKEYS]= {
         // Keyword Atom hash(keyword)
         //-------------------------------------------
-        { "main", mainsy }, // 0
-        { "function", functionsy }, // 1
-        { "matrix", matrixsy }, // 2
-        { "int", intsy }, // 3
-        { "return", returnsy }, // 4
-        { "while", whilesy }, // 5
-        { "break", breaksy }, // 6
-        { "continue", continuesy }, // 7
-        { "if", ifsy }, // 8
-        { "else", elsesy }, // 9
-        { "public", publicsy }, // 10
-        { "private", privatesy }, // 11
+        { "function", functionsy }, // 0
+        { "matrix", matrixsy }, // 1
+        { "int", intsy }, // 2
+        { "return", returnsy }, // 3
+        { "while", whilesy }, // 4
+        { "if", ifsy }, // 5
+        { "else", elsesy }, // 6
+        { "public", publicsy }, // 7
+        { "private", privatesy }, // 8
 
 };
 
@@ -33,30 +41,24 @@ unsigned Scan::hash(char *s, unsigned int len){
     // Kolizjê usuniêto eksplicite.
     //
     unsigned h;
-    if(strcmp(s, "main")==0)
-        return 0;
     if(strcmp(s, "function")==0)
-        return 1;
+        return 0;
     if(strcmp(s, "matrix")==0)
-        return 2;
+        return 1;
     if(strcmp(s, "int")==0)
-        return 3;
+        return 2;
     if(strcmp(s, "return")==0)
-        return 4;
+        return 3;
     if(strcmp(s, "while")==0)
-        return 5;
-    if(strcmp(s, "break")==0)
-        return 6;
-    if(strcmp(s, "continue")==0)
-        return 7;
+        return 4;
     if(strcmp(s, "if")==0)
-        return 8;
+        return 5;
     if(strcmp(s, "else")==0)
-        return 9;
+        return 6;
     if(strcmp(s, "public")==0)
-        return 10;
+        return 7;
     if(strcmp(s, "private")==0)
-        return 11;
+        return 8;
 
     h = (s[0]>>1) * s[1] * 1241;
     if(len>=3)
@@ -64,10 +66,10 @@ unsigned Scan::hash(char *s, unsigned int len){
     return h % NKEYS;
 }
 
-SymType Scan::NextSymbol(){ // G³ówna us³uga scanera
+
+bool Scan::SkipWhiteSpaceOrComment() {
     do{
         while(isspace(c)) Nextc();// Pomiñ znaki bia³e
-        if(c==EOF) return others;
         if(c=='#'){ // komentarz w stylu #...#
             do Nextc(); while(c!='#');
             Nextc();
@@ -78,9 +80,15 @@ SymType Scan::NextSymbol(){ // G³ówna us³uga scanera
             else do Nextc(); while(c!='\n');
         }
     } while(isspace(c) || c=='#' || c=='/');
+}
 
+SymType Scan::NextSymbol(){ // G³ówna us³uga scanera
+
+    SkipWhiteSpaceOrComment();
+
+    if(c==EOF) return EndOfFile;
     atompos=src.GetPos();
-    //---IDENTYFIKATOR LUB S£OWO KLUCZOWE
+    //---IDENTYFIKATOR LUB SLOWO KLUCZOWE
     if(isalpha(c)){
         unsigned int len=0, h;
         do{  // pobieramy identyfikarot do tabeli spell
@@ -108,7 +116,7 @@ SymType Scan::NextSymbol(){ // G³ówna us³uga scanera
             if (big == true) ScanError(INTCONST2BIG, "Error : Przekroczono zakres int!");
             return intconst;
         } else {
-            // cd3 NextSymbol() ---Pozostale atomy
+            // ---Pozostale atomy
             switch (c) {
                     //----Operatory 2 i 1 znakowe
                 case ':':
@@ -165,13 +173,13 @@ SymType Scan::NextSymbol(){ // G³ówna us³uga scanera
                     return lbracket;
                 case '}':
                     Nextc();
-                    return raccessop;
+                    return rbracket;
                 case '[':
                     Nextc();
                     return laccessop;
                 case ']':
                     Nextc();
-                    return rbracket;
+                    return raccessop;
                 case ',':
                     Nextc();
                     return comma;
@@ -186,6 +194,7 @@ SymType Scan::NextSymbol(){ // G³ówna us³uga scanera
                     return orop;
                 default :
                     Nextc();
+                    ScanError(NOTRECOGNISED, "Error : Nierozpoznany symbol");
                     return others;
             }
         }

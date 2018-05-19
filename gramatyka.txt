@@ -1,0 +1,46 @@
+================= BLOK =================
+{
+	if(a > b)
+	{
+		/* ... */
+	}	
+	else
+	{
+		/* ... */
+	}
+
+	while(i < 10)
+	{
+		/* ... */
+	}
+
+	public int v; 	// niedozwolone jest jednolinijkowa definicja i deklaracja (nie ma czegoœ takiego jak definicja)
+
+	{
+		private int g = 4;	/* inny blok np. do ograniczenia widoku zmiennej */
+	}
+
+	private matrix z;
+
+	z = v;
+
+	z = [1:1:1]; 
+}
+
+
+
+======================= PROGRAM =======================
+
+{ 
+public a;
+public b; 
+function Foo (int a) int 
+	{
+		/* ... */
+	}
+function main (int b, int a) int 
+	{
+		/* ... */
+	}
+}
+
