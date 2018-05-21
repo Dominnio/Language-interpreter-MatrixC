@@ -14,7 +14,7 @@ const char *AT[MAXSYM + 1] =
             "if", "else", "public",
             "private", "ident", "intconst",
             "*", "/", "+", "-", "<", "<=", ">", ">=", "!=", "=",
-            "(", ")", "{", "}", ";", ":", ":=", "!", "&", "|", "[", "]", ",", "others", "EndOfFile"
+            "(", ")", "{", "}", ";", ":", ":=", "!", "&", "|", "[", "]", ",", "@", "others", "EndOfFile"
         };
 
 
@@ -156,6 +156,9 @@ SymType Scan::NextSymbol(){ // G³ówna us³uga scanera
                 case '*':
                     Nextc();
                     return times;
+                case '@':
+                    Nextc();
+                    return printsy;
                 case '=':
                     Nextc();
                     return eqop;

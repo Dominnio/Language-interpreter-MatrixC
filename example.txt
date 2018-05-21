@@ -1,17 +1,15 @@
 {
-    public int ZmiennaInt;
-    public matrix ZmiennaMatrix;
-    private int ZmiennaInt;
-    function main() : int {
-        public int KolejnaZmiennaInt;
+    function main() : int
+    {
+
         {
-            public int a;
-            public int b;
-            b := 12;
-            a := 5+6*5+b;
+            private matrix a;
+            a := [1,2:1,2:1,2];
+            @ a;
         }
+
         {
-            private int a;
+
         }
     }
 }

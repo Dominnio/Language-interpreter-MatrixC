@@ -51,6 +51,7 @@ enum SymType // Atomy leksykalne
     laccessop,
     raccessop,
     comma,
+    printsy,
     others,
     EndOfFile,
     MAXSYM=others+1,

@@ -95,6 +95,7 @@ Block* Parser::parse_mainBlock() {
     int type;
     currentRangeList.push_back(rangeNumber);
     rangeNumber++;
+    auto thisBlockList = currentRangeList;
     try {
         accept(lbracket);
         while (true) {
@@ -111,10 +112,14 @@ Block* Parser::parse_mainBlock() {
                     type = 2;
                     statementsList->push_back(parse_declaration());
                     break;
+                case SymType::printsy:
+                    type = 7;
+                    statementsList->push_back(parse_printStatement());
+                    break;
                 default :
                     accept(rbracket);
                     currentRangeList.pop_back();
-                    return new Block(statementsList,currentRangeList,statementsNumebr);
+                    return new Block(statementsList,thisBlockList,statementsNumebr);
             }
             statementsNumebr.push_back(type);
         }
@@ -130,6 +135,7 @@ Block*  Parser::parse_functionBlock() {
     std::list<int> statementsNumebr;
     int type;
     rangeNumber++;
+    auto thisBlockList = currentRangeList;
     auto statementsList = new std::list<Statement*>;
     try {
         accept(lbracket);
@@ -159,6 +165,10 @@ Block*  Parser::parse_functionBlock() {
                     type = 5;
                     statementsList->push_back(parse_returnStatement());
                     break;
+                case SymType::printsy:
+                    type = 7;
+                    statementsList->push_back(parse_printStatement());
+                    break;
                 case SymType::lbracket :
                     type = 0;
                     statementsList->push_back(parse_block());
@@ -166,10 +176,22 @@ Block*  Parser::parse_functionBlock() {
                 default :
                     accept(rbracket);
                     currentRangeList.pop_back();
-                    return new Block(statementsList,currentRangeList,statementsNumebr);
+                    return new Block(statementsList,thisBlockList,statementsNumebr);
             }
             statementsNumebr.push_back(type);
         }
+    }catch (exception& e){
+        std::cout << e.what() << std::endl;
+    }
+}
+
+PrintStatement* Parser::parse_printStatement(){
+    //std::cout << "parsowanie printStatement\n"<<flush;
+    try {
+        accept(printsy);
+        Expression* expresionToPrint = parse_formula();
+        accept(semicolon);
+        return new PrintStatement(expresionToPrint);
     }catch (exception& e){
         std::cout << e.what() << std::endl;
     }
@@ -285,6 +307,7 @@ Block* Parser::parse_block() {
     //std::cout << "parsowanie block\n"<<flush;
     currentRangeList.push_back(rangeNumber);
     rangeNumber++;
+    auto thisBlockList = currentRangeList;
     std::list<int> statementsNumebr;
     auto statementsList = new std::list<Statement*>;
     try {
@@ -316,10 +339,14 @@ Block* Parser::parse_block() {
                     type = 1;
                     statementsList->push_back(parse_assigmentOrFunctionCall());
                     break;
+                case SymType::printsy:
+                    type = 7;
+                    statementsList->push_back(parse_printStatement());
+                    break;
                 default :
                     accept(rbracket);
                     currentRangeList.pop_back();
-                    return new Block(statementsList,currentRangeList,statementsNumebr);
+                    return new Block(statementsList,thisBlockList,statementsNumebr);
             }
             statementsNumebr.push_back(type);
         }
@@ -600,7 +627,10 @@ std::pair<Value*,Value*>* Parser::parse_matrixPosition() {
 
 Declaration* Parser::parse_declaration() {
     //std::cout << "parsowanie declaration\n"<<flush;
-    auto range = new std::list<int>(currentRangeList);
+    auto range = new std::list<int>;
+    for(auto iter = currentRangeList.begin(); iter != currentRangeList.end(); iter++){
+        range->push_back(*iter);
+    }
     auto type = new int;
     auto name  = new string;
     try {

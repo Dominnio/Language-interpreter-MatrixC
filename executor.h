@@ -15,7 +15,7 @@ public:
     const string &getName() const {
         return name;
     }
-    std::list<int> getRange() const {
+    std::list<int>* getRange() const {
         return range;
     }
     int getType() const {
@@ -23,13 +23,13 @@ public:
     }
 protected:
     string name;
-    std::list<int> range;
+    std::list<int>* range;
     int type;
 };
 
 class MatrixVal : public Val{
 public:
-    MatrixVal(string n, std::list<int> r, int t, vector<vector<int>> &v){
+    MatrixVal(string n, std::list<int>* r, int t, vector<vector<int>> &v){
         name = n;
         range = r;
         type = t;
@@ -47,7 +47,7 @@ private:
 
 class IntVal : public Val{
 public:
-    IntVal(string n, std::list<int> r, int t, int v = 0){
+    IntVal(string n, std::list<int>* r, int t, int v = 0){
         name = n;
         range = r;
         type = t;
@@ -117,6 +117,7 @@ public:
     Val* execute_declaration(Declaration* declaration, std::list<int> blockNumber);
     void execute_ifStatement(IfStatement* ifStatement, std::list<int> blockNumber);
     bool execute_comparision(Comparision * comparision, std::list<int> blockNumber);
+    bool execute_printStatement(PrintStatement* , std::list<int> blockNumber);
     bool execute_condition(Condition* condition, std::list<int> blockNumber);
     void execute_whileStatement(WhileStatement* whileStatement, std::list<int> blockNumber);
 private:

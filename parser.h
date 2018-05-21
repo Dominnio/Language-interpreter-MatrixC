@@ -34,10 +34,6 @@ public:
         return vals;
     }
 
-    void setVals(list<Value *> *vals) {
-        Expression::vals = vals;
-    }
-
     list<int> *getOpers() const {
         return opers;
     }
@@ -272,8 +268,23 @@ public:
         Statement::statementType = statementType;
     }
 protected:
-    int statementType = 4;
+    int statementType;
+};
 
+class PrintStatement : public Statement {
+public:
+    PrintStatement(Expression *e) {
+        statementType = 7;
+        expresionToPrint = e;
+    }
+    Expression *getExpresionToPrint() const {
+        return expresionToPrint;
+    }
+    void setExpresionToPrint(Expression *expresionToPrint) {
+        PrintStatement::expresionToPrint = expresionToPrint;
+    }
+private:
+    Expression *expresionToPrint;
 };
 
 class ReturnStatement : public Statement{
@@ -308,14 +319,12 @@ public:
         name = n;
         functionCall = funCall;
     }
-private:
-    int* type;
 public:
-    int *getTypeOfConst() const {
+    int *getType() const {
         return type;
     }
 
-    void setTypeOfConst(int *type) {
+    void setType(int *type) {
         AssigmentOrFunctionCall::type = type;
     }
 
@@ -347,6 +356,7 @@ private:
     string* name;
     FunctionCall* functionCall;
     Expression* expression;
+    int* type;
 };
 
 class Declaration : public Statement{
@@ -358,9 +368,6 @@ public:
         name = n;
         setStatementType(2);
     }
-private:
-    int* type;
-public:
     int *getType() const {
         return type;
     }
@@ -387,8 +394,9 @@ public:
 
 private:
     // 0 - int, 1 - matrix
-    std::list<int>* range; // 0 - public, 1 - priate
+    std::list<int>* range;
     string* name; // nazwa
+    int* type;
 };
 
 class WhileStatement : public Statement{
@@ -614,6 +622,7 @@ private:
     int* parse_type();
     string* parse_identOnlyString();
     int* parse_intconst();
+    PrintStatement* parse_printStatement();
 
 };
 
