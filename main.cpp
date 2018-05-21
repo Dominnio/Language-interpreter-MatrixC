@@ -10,16 +10,15 @@
 
 int main()
 {
-    Source* source = new Source("C:\\Users\\Dominik\\CLionProjects\\Language-interpreter-MatrixC\\example.txt");
-    Scan scan(*source);
-
     setbuf(stdout, 0);
 
+    Source* source = new Source("C:\\Users\\Dominik\\CLionProjects\\Language-interpreter-MatrixC\\example.txt");
+    Scan scan(*source);
     Parser parser(&scan);
     parser.Program();
-
     executor exec;
     exec.MainExecute(&parser);
+    std::cout << "\n========= Wykonanie zakonczone =========";
 
     /*
      *
@@ -68,7 +67,5 @@ while(sym != EndOfFile) {
     }
 }
  */
-
-    std::cout << "========= Parser wykonal analize =========";
     return 0;
 }

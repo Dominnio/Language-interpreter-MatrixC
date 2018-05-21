@@ -5,89 +5,15 @@
 #include "executor.h"
 #include <algorithm>
 
-void executor::MainExecute(Parser* parser){
-    for(auto iter = parser->getMainBlock()->getStatementsBlock()->begin(); iter != parser->getMainBlock()->getStatementsBlock()->end(); iter++){
-        if((*iter)->getStatementType() == 2)
-        {
-            execute_declaration(static_cast<Declaration*>(*iter),0);
-        }
-        if((*iter)->getStatementType() == 6)
-        {
-            execute_function(static_cast<Function*>(*iter));
-        }
-    }
-
-    // tutaj na końcu musi być executeFunctonCall( funkcja main )
+void executor::execute_returnStatement(ReturnStatement* returnStatement, std::list<int> blockNumber ) {
 
 }
 
-void executor::execute_block(Block* block) {
-    for(auto iter = block->getStatementsBlock()->begin(); iter != block->getStatementsBlock()->end(); iter++){
-        if((*iter)->getStatementType() == 2)
-        {
-            execute_declaration(static_cast<Declaration*>(*iter), block->getNumber());
-        }
-        if((*iter)->getStatementType() == 6)
-        {
-            execute_function(static_cast<Function*>(*iter));
-        }
-    }
-
-}
-
-void executor::execute_functionBlock() {
-
-}
-
-void executor::execute_function(Function* function) {
-    if(std::find(functionNames.begin(), functionNames.end(),*function->getName()) == functionNames.end())   // jeśli jeszcze nie ma takiej funckji
-    {
-        functionNames.push_back(*function->getName());
-    }else{  // jeśli już jest taka deklaracja
-        std::cout << "Redeklaracja funkcji!" << std::endl  <<  std::flush;
-    }
-}
-
-void executor::execute_functionCall() {
-
-}
-
-void executor::execute_returnStatement() {
-
-}
-
-void executor::execute_assigmentOrFunctionCall() {
-
-}
-
-void executor::execute_functionArguments() {
-
-}
-int executor::execute_formulaInt(Expression* expression) {
-
-}
-
-std::vector<std::vector<int>> executor::execute_formulaMatrix(Expression* expression) {
-
-}
-
-void executor::execute_formula(Expression* expression) {
+std::vector<std::vector<int>> executor::execute_formulaMatrix(Expression* expression, std::list<int> blockNumber) {
+    /*
     int type = *expression->getLeftVal()->getType();
     if(type == 0){
-        int result;
-
-        if(expression->getRightExp() == nullptr){
-            result = *expression->getLeftVal()->getIntValue();
-        }else {
-            if (*expression->getOper() == 0)
-                result = *expression->getLeftVal()->getIntValue() * execute_expressionHighInt(expression->getRightExp());
-            if (*expression->getOper() == 1)
-                result = *expression->getLeftVal()->getIntValue() / execute_expressionHighInt(expression->getRightExp());
-            if (*expression->getOper() == 2)
-                result = *expression->getLeftVal()->getIntValue() + execute_expressionHighInt(expression->getRightExp());
-            if (*expression->getOper() == 3)
-                result = *expression->getLeftVal()->getIntValue() - execute_expressionHighInt(expression->getRightExp());
-        }
+        std::cout << "Chcesz wykonywac operacje na matrix a masz wartosc int";
     }else{
         std::vector<std::vector<Expression*>*> result;
         std::vector<std::vector<Expression*>*> rightMatrix;
@@ -95,7 +21,7 @@ void executor::execute_formula(Expression* expression) {
         if(expression->getRightExp() == nullptr){
             result = *expression->getLeftVal()->getMatrixValue();
         }else{
-            rightMatrix = execute_expressionHighMatrix(expression->getRightExp());
+            rightMatrix = execute_expressionHighMatrix(expression->getRightExp(),blockNumber);
             if (*expression->getOper() == 0){
                 if((*expression->getLeftVal()->getMatrixValue()->begin())->size() != rightMatrix.size()){
                     std::cout << "Nie można wykonać mnożenia macierzy (niekompatybilna liczba kolumn i wierszy)" << std::endl;
@@ -138,64 +64,399 @@ void executor::execute_formula(Expression* expression) {
         }
 
     }
+     */
 }
 
-int executor::execute_expressionHighInt(Expression* expression) {
-    int type = *expression->getLeftVal()->getType();
-    if(type == 0){
-        int result = *expression->getLeftVal()->getIntValue() * execute_expressionHighInt(expression->getRightExp());
-        // to będzie mnożenie intów
-    }else{
-        // to będzie mnoenie macierzy czyli trzeba oddać błąd
+int executor::execute_formulaInt(Expression* expression, std::list<int> blockNumber) {
+    auto opersIter = expression->getOpers()->begin();
+    auto valsIter = expression->getVals()->begin();
+    std::list<int> valsList;
+    std::list<int> operList;
+    while(opersIter != expression->getOpers()->end()){
+        operList.push_back(*opersIter);
+        opersIter++;
+    }
+    while(valsIter != expression->getVals()->end()){
+        valsList.push_back(execute_IntValue(*valsIter,blockNumber));
+        valsIter++;
+    }
+    int result = 0;
+
+    if(operList.size() == 0){
+        return *valsList.begin();
+    }
+
+    bool isHighOperator = true;
+    while(isHighOperator){
+        auto valsListIter = valsList.begin();
+        auto valsListNextIter = valsList.begin()++;
+        auto opersListIter = operList.begin();
+
+        while(*opersListIter == 2 || *opersListIter == 3){
+            valsListIter++;
+            opersListIter++;
+            valsListNextIter++;
+            if(opersListIter == operList.end()){
+                break;
+            }
+        }
+        if(opersListIter == operList.end()){
+            isHighOperator = false;
+        }else{
+            if(*opersListIter == (int) 0){
+                *valsListIter *= *valsListNextIter;
+                valsList.erase(valsListNextIter);
+                operList.erase(opersListIter);
+                continue;
+            }else{
+                *valsListIter /= *valsListNextIter;
+                valsList.erase(valsListNextIter);
+                operList.erase(opersListIter);
+                continue;
+            }
+        }
+    }
+    auto valsListIter = valsList.begin();
+    auto opersListIter = operList.begin();
+    result = *valsListIter;
+    valsListIter++;
+    while(opersListIter != operList.end()){
+        if(*opersListIter == 2){
+            result += *valsListIter;
+        }else{
+            result -= *valsListIter;
+        }
+        valsListIter++;
+        opersListIter++;
+    }
+    return result;
+}
+
+int executor::execute_matrixPosition(Ident* ident, std::list<int> blockNumber) {
+    bool flag = true;
+    for (auto iter = values.begin(); iter != values.end(); iter++) {
+        if ((*iter)->getName() == *ident->getName()) {
+            if ((*iter)->getRange().size() == 1 && *((*iter)->getRange().begin()) == 0) {
+                return static_cast<MatrixVal*>(*iter)->getValue()[execute_IntValue(ident->getPosition()->first, blockNumber)][execute_IntValue(ident->getPosition()->second, blockNumber)];
+            }
+            if((*iter)->getRange().size() > blockNumber.size()){    // to na pewno nie jest ta zmienna ktorej szukamy, bo ta nie jest widoczna w tym bloku
+                continue;
+            }
+            auto num2 = blockNumber.begin();
+            for (auto num = (*iter)->getRange().begin(); num != (*iter)->getRange().end(); num++) {
+                if (num != num2) {
+                    flag = false;
+                    break; // to nie ta zmienna
+                }
+                num2++;
+            }
+            if(!flag){
+                flag = true;
+                continue;
+            }
+            if((*iter)->getType() == *ident->getType()) {    // jesli typy sie zgadzaja to czas przypisac
+                if(*ident->getType() == 0 ){
+                    // tu jest blad bo jednak sie typy nie zgadzaja
+                }else{
+                    return static_cast<MatrixVal*>(*iter)->getValue()[execute_IntValue(ident->getPosition()->first, blockNumber)][execute_IntValue(ident->getPosition()->second, blockNumber)];
+                }
+            }
+        }
     }
 }
-std::vector<std::vector<Expression*>*> executor::execute_expressionHighMatrix(Expression* expression) {
-    int type = *expression->getLeftVal()->getType();
-    if(type == 0){
-        // to będzie mnożenie intów czyli trzeba oddać błąd bo nie można tak robić
-    }else{
-        // to będzie mnoenie macierzy
+
+vector<vector<int>> executor::execute_matrixValue(Value* value, std::list<int> blockNumber) {
+    bool flag = true;
+    vector<vector<int>> allVal;
+    vector<int> rowVal;
+    if (*value->getType() == 2) {
+        for (auto iter = values.begin(); iter != values.end(); iter++) {
+            if ((*iter)->getName() == *value->getIdentValue()->getName()) {
+                if ((*iter)->getRange().size() == 1 && *((*iter)->getRange().begin()) == 0) { // zrob przypisanie bo to zmienna publiczna
+                    return static_cast<MatrixVal*>(*iter)->getValue();
+                }
+                if((*iter)->getRange().size() > blockNumber.size()){    // to na pewno nie jest ta zmienna ktorej szukamy, bo ta nie jest widoczna w tym bloku
+                    continue;
+                }
+                auto num2 = blockNumber.begin();
+                for (auto num = (*iter)->getRange().begin(); num != (*iter)->getRange().end(); num++) {
+                    if (num != num2) {
+                        flag = false;
+                        break; // to nie ta zmienna
+                    }
+                    num2++;
+                }
+                if(!flag){
+                    flag = true;
+                    continue;
+                }
+                if((*iter)->getType() == *value->getType()) {    // jesli typy sie zgadzaja to czas przypisac
+                    if(*value->getType() == 0 ){
+                        // tu jest blad bo jednak sie typy nie zgadzaja
+                    }else{
+                        return static_cast<MatrixVal*>(*iter)->getValue();
+                    }
+                }
+            }
+        }
+        std::cout << "Niezadeklarowana zmienna" << std::endl;
+        // identyfikator - trzeba siegnac do tablicy w wykonawcy
+    }
+    if (*value->getType() == 1) {
+        auto width = (*value->getMatrixValue()->begin())->size();
+        for(auto iter = *value->getMatrixValue()->begin(); iter != *value->getMatrixValue()->end(); iter++){
+            if((*iter).size() != width){
+                std::cout << "Wiersze macierzy roznia sie liczba elementow";
+                return allVal;
+            }
+        }
+        for(auto row = *value->getMatrixValue()->begin(); row != *value->getMatrixValue()->end(); row++){
+            rowVal.clear();
+            for(auto col = row->begin(); col != row->end(); row++){
+                rowVal.push_back(execute_formulaInt(*col,blockNumber));
+            }
+            allVal.push_back(rowVal);
+        }
+        return allVal;
+    }
+    if (*value->getType() == 0) {
+        std::cout << "Brak wymaganej wartości matrix" << std::endl;
+
     }
 }
 
-void executor::execute_arguments() {
+// tutaj trzeba jeszcze rowzazyc jeden przypadek konkretnie to ident ktory jest taki ala[1,2] oraz ala() jako funkcja i to samo dla matrix
+int executor::execute_IntValue(Value* value, std::list<int> blockNumber) {
+    bool flag = true;
+    if (*value->getType() == 2 && value->getIdentValue()->getType() == 0) {
+        for (auto iter = values.begin(); iter != values.end(); iter++) {
+            if ((*iter)->getName() == *value->getIdentValue()->getName()) {
+                if ((*iter)->getRange().size() == 1 && *((*iter)->getRange().begin()) == 0) { // zrob przypisanie bo to zmienna publiczna
+                    return static_cast<IntVal*>(*iter)->getValue();
+                }
+                if((*iter)->getRange().size() > blockNumber.size()){    // to na pewno nie jest ta zmienna ktorej szukamy, bo ta nie jest widoczna w tym bloku
+                    continue;
+                }
+                auto num2 = blockNumber.begin();
+                for (auto num = (*iter)->getRange().begin(); num != (*iter)->getRange().end(); num++) {
+                    if (num != num2) {
+                        flag = false;
+                        break; // to nie ta zmienna
+                    }
+                    num2++;
+                }
+                if(!flag){
+                    flag = true;
+                    continue;
+                }
+                if((*iter)->getType() == *value->getType()) {    // jesli typy sie zgadzaja to czas zwrocic
+                    if(*value->getType() == 0 ){
+                        return static_cast<IntVal*>(*iter)->getValue();
+                    }else{
+                        // tu jest blad bo jednak sie typy nie zgadzaja
+                    }
+                }
+            }
+        }
+        std::cout << "Niezadeklarowana zmienna" << std::endl;
+        // identyfikator - trzeba siegnac do tablicy w wykonawcy
+    }
+    if (*value->getType() == 0) {
+        return *value->getIntValue();
+    }
+    if (*value->getType() == 1) {
+        std::cout << "Brak wymaganej wartości int" << std::endl;
+    }
+}
+
+
+// tutaj jest pewna nie zerowa szansa, że jest dobrze
+
+void executor::execute_assigmentOrFunctionCall(AssigmentOrFunctionCall* assigment, std::list<int> blockNumber) {
+    if(*assigment->getTypeOfConst() == 0){
+        execute_assigment(assigment,blockNumber);
+    }else{
+        execute_functionCall(assigment,blockNumber);
+    }
+}
+
+
+void executor::MainExecute(Parser* parser){
+    for(auto iter = parser->getMainBlock()->getStatementsBlock()->begin(); iter != parser->getMainBlock()->getStatementsBlock()->end(); iter++){
+        if((*iter)->getStatementType() == 2)
+        {
+            execute_declaration(static_cast<Declaration*>(*iter),parser->getMainBlock()->getNumber());
+        }
+        if((*iter)->getStatementType() == 6)
+        {
+            execute_function(static_cast<Function*>(*iter),parser->getMainBlock()->getNumber());
+        }
+    }
+    Fun* mainFun = new Fun();
+    for(auto iter = functions.begin(); iter != functions.end(); iter++){
+        if((*iter)->getName() == "main"){
+            mainFun = *iter;
+            break;
+        }
+    }
+    FunctionCall* mainCall = new FunctionCall(nullptr);
+
+    execute_functionCall(new AssigmentOrFunctionCall(new string("main"),mainCall),parser->getMainBlock()->getNumber());
+}
+
+void executor::execute_functionCall(AssigmentOrFunctionCall* functionCall, std::list<int> blockNumber) {
+
+    Fun* fun = new Fun();
+    for(auto iter = functions.begin(); iter != functions.end(); iter++){
+        if((*iter)->getName() == *functionCall->getName()){
+            fun = *iter;
+            break;
+        }
+    }
+    // tutaj dla każdego argumentu trzeba podpisać go do odpowiedniej zmiennej;
+    if(functionCall->getFunctionCall()->getArgList() != nullptr) {
+        for (auto iter = (fun)->getArguments().begin(); iter != (fun)->getArguments().end(); iter++) {
+            auto arg = functionCall->getFunctionCall()->getArgList()->begin();
+            if ((*iter)->getType() == 0) {
+                static_cast<IntVal *>(*iter)->setValue(execute_formulaInt(*arg, blockNumber));
+            } else {
+                static_cast<MatrixVal *>(*iter)->setValue(execute_formulaMatrix(*arg, blockNumber));
+            }
+            arg++;
+        }
+    }
+    execute_block( (fun)->getBlock() );
+}
+
+// to jest wykonanie DEKLARACJI FUNKCJI !!!
+void executor::execute_function(Function* function, std::list<int> blockNumber) {
+    for(auto iter = functions.begin(); iter != functions.end(); iter++) {
+        if ((*iter)->getName() == *function->getName()) {       // jeśli funckja o danej nazwie już istnieje
+            std::cout << "Redeklaracja funkcji!" << std::endl << std::flush;
+        }
+    }
+    // deklarujemy nowe zmienne, ktore beda widoczne tylko w tej funkcji
+    std::list<Val*> arguments;
+    for(auto arg = function->getArguments()->begin(); arg != function->getArguments()->end(); arg++) {
+        Declaration *declaration = new Declaration((*arg)->second, new std::list<int>, (*arg)->first);
+        arguments.push_back(execute_declaration(declaration,function->getBlock()->getNumber()));
+    }
+    functions.push_back(new Fun(*function->getName(),new Val(),function->getBlock(),arguments));
 
 }
 
-void executor::execute_matrixValue() {
 
+void executor::execute_block(Block* block) {
+    auto num = block->getStatementsNumbers().begin();
+    for(auto iter = block->getStatementsBlock()->begin(); iter != block->getStatementsBlock()->end(); iter++){
+        if(*num == 0)
+        {
+            execute_block(static_cast<Block*>(*iter));
+        }
+        if(*num  == 1)
+        {
+            execute_assigmentOrFunctionCall(static_cast<AssigmentOrFunctionCall*>(*iter), block->getNumber());
+        }
+        if(*num  == 2)
+        {
+            execute_declaration(static_cast<Declaration*>(*iter), block->getNumber());
+        }
+        if(*num  == 3)
+        {
+            execute_ifStatement(static_cast<IfStatement*>(*iter), block->getNumber());
+        }
+        if(*num == 4)
+        {
+            execute_whileStatement(static_cast<WhileStatement*>(*iter), block->getNumber());
+        }
+        if(*num  == 5)
+        {
+            execute_returnStatement(static_cast<ReturnStatement*>(*iter), block->getNumber());
+            break;
+        }
+        num++;
+    }
 }
 
-void executor::execute_matrixRow() {
 
+bool executor::execute_comparision(Comparision * comparision,std::list<int> blockNumber) {
+    int left = execute_formulaInt(comparision->getLeft(), blockNumber);
+    int right = execute_formulaInt(comparision->getRight(), blockNumber);
+    if(*comparision->getOper() == 0){
+        if(left == right){
+            return true;
+        }
+    }
+    if(*comparision->getOper() == 1){
+        if(left != right){
+            return true;
+        }
+    }
+    if(*comparision->getOper() == 2){
+        if(left <=right){
+            return true;
+        }
+    }
+    if(*comparision->getOper() == 3){
+        if(left == right){
+            return true;
+        }
+    }
+    if(*comparision->getOper() == 4){
+        if(left < right){
+            return true;
+        }
+    }
+    if(*comparision->getOper() == 5){
+        if(left >= right){
+            return true;
+        }
+    }
+    if(*comparision->getOper() == 6){
+        if(left > right){
+            return true;
+        }
+    }
+    return false;
 }
 
-void executor::execute_matrixPosition() {
-
-}
-
-void executor::execute_value() {
-
-}
-
-void executor::execure_ident() {
-
-}
-
-// to jest w 100% dobrze
-
-void executor::execute_assigment(AssigmentOrFunctionCall* assigment, int blockNumber) {
+void executor::execute_assigment(AssigmentOrFunctionCall* assigment, std::list<int> blockNumber) {
+    bool flag = true;
     for(auto iter = values.begin(); iter != values.end(); iter++){
-        if((*iter).getName() == *assigment->getName()){        // jesli nazwa jest zadeklarowana
-            if((*iter).getRange() == blockNumber || (*iter).getRange() == 0){      // jesli miesci sie w zasiegu
-                if((*iter).getType() == *assigment->getTypeOfConst()) {       // jesli typy sie zgadzaja
+        if((*iter)->getName() == *assigment->getName()){        // jesli nazwa jest zadeklarowana
+            if((*iter)->getRange().size() == 1 && *((*iter)->getRange().begin()) == 0){     // jesli jest to zmienna publiczna to na pewno trzeba zrobic przypisanie
+                if((*iter)->getType() == *assigment->getTypeOfConst()) {       // jesli typy sie zgadzaja to zrob przypisanie
                     if(*assigment->getTypeOfConst() == 0 ){
-                        static_cast<IntVal*>(*iter)->setValue(execute_formulaInt(assigment->getExpression()));
+                        static_cast<IntVal*>(*iter)->setValue(execute_formulaInt(assigment->getExpression(),blockNumber));
                         return;
                     }else{
-                        static_cast<MatrixVal*>(*iter)->setValue(execute_formulaMatrix(assigment->getExpression()));
+                        static_cast<MatrixVal*>(*iter)->setValue(execute_formulaMatrix(assigment->getExpression(),blockNumber));
                         return;
                     }
+                }
+            }
+            if((*iter)->getRange().size() > blockNumber.size()){    // ta zmienna nie ma szans być tą której szukamy, bo nie jest tu widoczna
+                continue;
+            }
+            auto num2 = blockNumber.begin();
+            for (auto num = (*iter)->getRange().begin(); num != (*iter)->getRange().end(); num++) {
+                if (num != num2) {
+                    flag = false;
+                    break; // to nie ta zmienna
+                }
+                num2++;
+            }
+            if(!flag){
+                flag = true;
+                continue;
+            }
+            if((*iter)->getType() == *assigment->getTypeOfConst()) {       // jesli typy sie zgadzaja to zrob przypisanie
+                if(*assigment->getTypeOfConst() == 0 ){
+                    static_cast<IntVal*>(*iter)->setValue(execute_formulaInt(assigment->getExpression(),blockNumber));
+                    return;
+                }else{
+                    static_cast<MatrixVal*>(*iter)->setValue(execute_formulaMatrix(assigment->getExpression(),blockNumber));
+                    return;
                 }
             }
         }
@@ -205,105 +466,89 @@ void executor::execute_assigment(AssigmentOrFunctionCall* assigment, int blockNu
     return;
 }
 
-void executor::execute_declaration(Declaration* declaration, int blockNumber) {
-    for(auto iter = values.begin(); iter != values.end(); iter++){
-        if((*iter).getName() == *declaration->getName()){  // zmienna o takiej samej nazwie jest już zadeklarowana
-            if((*iter).getRange() == *declaration->getRange() || *declaration->getRange() == 0 || (*iter).getRange() == 0 ){     // zmienna o takim samym zasiegu jest już zadeklarowana (szczególny przypadek - zasięg globalny)
-                std::cout << "Redeklaracja zmiennej!" << std::endl << std::flush;
-                return;
-            }else{  // zmienna o takiej nazwie już istanieje ale nie jest w zasięgu
-                if(*declaration->getType() == 0){
-                    blockNumber = 0;
-                }
-                if(*declaration->getType() == 0){
-                    values.push_back(IntVal(*declaration->getName(),blockNumber,*declaration->getType(),0));
-                    return;
-                }else{
-                    values.push_back(MatrixVal(*declaration->getName(),blockNumber,*declaration->getType(),nullptr));
-                    return;
+Val* executor::execute_declaration(Declaration* declaration, std::list<int> blockNumber) {
+    Val* retval;
+    std::list<int> range;
+    for(auto iter = values.begin(); iter != values.end(); iter++) {
+        if ((*iter)->getName() == *declaration->getName()) {  // zmienna o takiej samej nazwie jest już zadeklarowana
+            if((*iter)->getRange().size() == 1 && *((*iter)->getRange().begin()) == 0) {
+                std::cout << "Redeklaracja zmiennej" << std::endl;
+                return nullptr;
+            }
+            if ((*iter)->getRange().size() < declaration->getRange()->size()) {
+                std::cout << "Deklaracja zmiennej o nazwie juz istniejacej (1)" << std::endl;
+                if (*declaration->getType() == 1) {
+                    retval = new IntVal(*declaration->getName(), *declaration->getRange(), *declaration->getType(), 0);
+                    values.push_back(retval);
+                    return retval;
+                } else {
+                    std::vector<std::vector<int>> vec;
+                    retval = new MatrixVal(*declaration->getName(), *declaration->getRange(), *declaration->getType(),
+                                           vec);
+                    values.push_back(retval);
+                    return retval;
                 }
             }
+            auto num2 = *declaration->getRange()->begin();
+            for (auto num = (*iter)->getRange().begin(); num != (*iter)->getRange().end(); num++) {
+                if (*num != num2) {
+                    std::cout << "Deklaracja zmiennej o nazwie juz istniejacej (2)" << std::endl;
+                    if(*declaration->getType() == 1){
+                        retval = new IntVal(*declaration->getName(),*declaration->getRange(),*declaration->getType(),0);
+                        values.push_back(retval);
+                        return retval;
+                    }else{
+                        std::vector<std::vector<int>> vec;
+                        retval = new MatrixVal(*declaration->getName(),*declaration->getRange(),*declaration->getType(),vec);
+                        values.push_back(retval);
+                        return retval;
+                    }
+                }
+                num2++;
+            }
+            std::cout << "Redeklaracja zmiennej" << std::endl;
+            return nullptr;
         }
     }
     // jesli przeiterowano cala liste i nie znaleziono ani razu zmiennej o takiej nazwie i zasiegu to dodajemy zmienna
-    if(*declaration->getType() == 0){
-        blockNumber = 0;
-    }
-    if(*declaration->getType() == 0){
-        values.push_back(IntVal(*declaration->getName(),*declaration->getRange(),*declaration->getType(),0));
-        return;
+    std::cout << "Deklaracja zmiennej o nowej nazwie" << std::endl;
+    if(*declaration->getType() == 1){
+        retval = new IntVal(*declaration->getName(),*declaration->getRange(),*declaration->getType(),0);
+        values.push_back(retval);
+        return retval;
     }else{
-        values.push_back(MatrixVal(*declaration->getName(),*declaration->getRange(),*declaration->getType(),nullptr));
-        return;
+        std::vector<std::vector<int>> vec;
+        retval = new MatrixVal(*declaration->getName(),*declaration->getRange(),*declaration->getType(),vec);
+        values.push_back(retval);
+        return retval;
     }
+
 }
 
-void executor::execute_whileStatement(WhileStatement* whileStatement) {
-    while(execute_condition(whileStatement->getCondition())){
+void executor::execute_whileStatement(WhileStatement* whileStatement, std::list<int> blockNumber ) {
+    while(execute_condition(whileStatement->getCondition(),blockNumber)){
         execute_block(whileStatement->getBlock());
     }
 }
 
-void executor::execute_ifStatement(IfStatement* ifStatement) {
-    if(execute_condition(ifStatement->getCondition())){
+void executor::execute_ifStatement(IfStatement* ifStatement, std::list<int> blockNumber ) {
+    if(execute_condition(ifStatement->getCondition(),blockNumber)){
         execute_block(ifStatement->getBlock());
     }else{
         execute_block(ifStatement->getElseBlock());
     }
-
 }
 
-bool executor::execute_condition(Condition* condition) {
+bool executor::execute_condition(Condition* condition, std::list<int> blockNumber) {
     for(auto iter = condition->getComparisionAndOp()->begin(); iter!= condition->getComparisionAndOp()->end();){
         if((*iter).second != nullptr){
             if((*iter).second == 0){
-                return execute_comparision((*iter).first) && execute_comparision((*iter++).first);
+                return execute_comparision((*iter).first,blockNumber) && execute_comparision((*iter++).first,blockNumber);
             }else{
-                return execute_comparision((*iter).first) || execute_comparision((*iter++).first);
+                return execute_comparision((*iter).first,blockNumber) || execute_comparision((*iter++).first,blockNumber);
             }
         }else{
-            return execute_comparision((*iter).first);
+            return execute_comparision((*iter).first,blockNumber);
         }
     }
-}
-
-bool executor::execute_comparision(Comparision * comparision) {
-    int* left = comparision->getLeft()->getIntValue();
-    int* right = comparision->getRight()->getIntValue();
-    if(*comparision->getOper() == 0){
-        if(*left == *right){
-            return true;
-        }
-    }
-    if(*comparision->getOper() == 1){
-        if(*left != *right){
-            return true;
-        }
-    }
-    if(*comparision->getOper() == 2){
-        if(*left <=*right){
-            return true;
-        }
-    }
-    if(*comparision->getOper() == 3){
-        if(*left == *right){
-            return true;
-        }
-    }
-    if(*comparision->getOper() == 4){
-        if(*left < *right){
-            return true;
-        }
-    }
-    if(*comparision->getOper() == 5){
-        if(*left >= *right){
-            return true;
-        }
-    }
-    if(*comparision->getOper() == 6){
-        if(*left > *right){
-            return true;
-        }
-    }
-    return false;
 }

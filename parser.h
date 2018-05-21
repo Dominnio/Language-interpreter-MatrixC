@@ -26,62 +26,30 @@ class Value;
 
 class Expression{
 public:
-    Expression(Expression* r, int* op, Value* l){
-        oper = op;
-        leftVal = l;
-        rightExp = r;
+    Expression(std::list<Value*>* v, std::list<int>* o){
+        opers = o;
+        vals = v;
     }
-private:
-    int* oper;
-public:
-    int *getOper() const {
-        return oper;
+    list<Value *> *getVals() const {
+        return vals;
     }
 
-    void setOper(int *oper) {
-        Expression::oper = oper;
+    void setVals(list<Value *> *vals) {
+        Expression::vals = vals;
     }
 
-    Value *getLeftVal() const {
-        return leftVal;
+    list<int> *getOpers() const {
+        return opers;
     }
 
-    void setLeftVal(Value *leftVal) {
-        Expression::leftVal = leftVal;
+    void setOpers(list<int> *opers) {
+        Expression::opers = opers;
     }
-
-    Expression *getRightExp() const {
-        return rightExp;
-    }
-
-    void setRightExp(Expression *rightExp) {
-        Expression::rightExp = rightExp;
-    }
-
 private:
     // 0 - '*'     1 - '/'    2 - '+'     3 - '-'
-    int* intValue;
-public:
-    int *getIntValue() const {
-        return intValue;
-    }
+    std::list<Value*>* vals;
+    std::list<int>* opers;
 
-    void setIntValue(int *intValue) {
-        Expression::intValue = intValue;
-    }
-
-    vector<vector<Expression *> *> *getMatrixValue() const {
-        return matrixValue;
-    }
-
-    void setMatrixValue(vector<vector<Expression *> *> *matrixValue) {
-        Expression::matrixValue = matrixValue;
-    }
-
-private:
-    std::vector<std::vector<Expression*>*>* matrixValue;
-    Value* leftVal;
-    Expression* rightExp;
 };
 
 class FunctionCall;
@@ -89,12 +57,15 @@ class FunctionCall;
 class Ident{
 public:
     Ident(string* val){
+        type = new int(0);
         name = val;
     }
     Ident(std::pair<Value*,Value*>* val){
+        type = new int(1);
         position = val;
     }
     Ident(FunctionCall* val){
+        type = new int(2);
         nameAndArg = val;
     }
 private:
@@ -146,13 +117,15 @@ public:
         *type = 0;
         intValue = v;
     }
-    Value(Ident* v){
-        identValue = v;
-    }
     Value(std::vector<std::vector<Expression*>*>* v){
         type = new int;
         *type = 1;
         matrixValue = v;
+    }
+    Value(Ident* v){
+        type = new int;
+        *type = 2;
+        identValue = v;
     }
 private:
     int* type;
@@ -202,16 +175,14 @@ public:
     FunctionCall( std::list<Expression*>* arg){
         argList = arg;
     }
-private:
-    std::list<Expression*>* argList;
-public:
     list<Expression *> *getArgList() const {
         return argList;
     }
-
     void setArgList(list<Expression *> *argList) {
         FunctionCall::argList = argList;
     }
+private:
+    std::list<Expression*>* argList;
 };
 
 class Comparision{
@@ -267,9 +238,6 @@ public:
     Condition(std::list<std::pair<Comparision*,int*>>* comparisionAndO){
         comparisionAndOp = comparisionAndO;
     }
-private:
-    bool* result;
-public:
     bool *getResult() const {
         return result;
     }
@@ -288,6 +256,7 @@ public:
 
 private:
     std::list<std::pair<Comparision*,int*>>* comparisionAndOp;
+    bool* result;
 };
 
 class Block;
@@ -303,26 +272,24 @@ public:
         Statement::statementType = statementType;
     }
 protected:
-    int statementType;
+    int statementType = 4;
 
 };
 
 class ReturnStatement : public Statement{
 public:
     ReturnStatement(Value* v ){
+        statementType = 5;
         val = v;
     }
-private:
-    Value* val;
-public:
     Value *getVal() const {
         return val;
     }
-
     void setVal(Value *val) {
         ReturnStatement::val = val;
     }
-
+private:
+    Value* val;
 };
 
 class AssigmentOrFunctionCall : public Statement{
@@ -380,13 +347,11 @@ private:
     string* name;
     FunctionCall* functionCall;
     Expression* expression;
-
-
 };
 
 class Declaration : public Statement{
 public:
-    Declaration(int* t, int* r, string* n){
+    Declaration(int* t, std::list<int>* r, string* n){
         statementType = 2;
         type = t;
         range = r;
@@ -404,11 +369,11 @@ public:
         Declaration::type = type;
     }
 
-    int *getRange() const {
+    std::list<int> *getRange() const {
         return range;
     }
 
-    void setRange(int *range) {
+    void setRange(std::list<int> *range) {
         Declaration::range = range;
     }
 
@@ -422,7 +387,7 @@ public:
 
 private:
     // 0 - int, 1 - matrix
-    int* range; // 0 - public, 1 - priate
+    std::list<int>* range; // 0 - public, 1 - priate
     string* name; // nazwa
 };
 
@@ -497,17 +462,18 @@ private:
 
 class Block : public Statement{
 public:
-    Block(std::list<Statement*>* statements, int n){
+    Block(std::list<Statement*>* statements, std::list<int> n, std::list<int> stN){
         statementType = 0;
         number = n;
+        statementsNumbers = stN;
         statementsBlock = statements;
     }
 public:
-    int getNumber() const {
+    std::list<int> getNumber() const {
         return number;
     }
 
-    void setNumber(int number) {
+    void setNumber(std::list<int> number) {
         Block::number = number;
     }
 
@@ -518,17 +484,27 @@ public:
     void setStatementsBlock(list<Statement *> *statementsBlock) {
         Block::statementsBlock = statementsBlock;
     }
+    const list<int> &getStatementsNumbers() const {
+        return statementsNumbers;
+    }
+
+    void setStatementsNumbers(const list<int> &statementsNumbers) {
+        Block::statementsNumbers = statementsNumbers;
+    }
+
 
 private:
     int statementType;
-    int number;
+    std::list<int> number;
+    std::list<int> statementsNumbers;
     std::list<Statement*>* statementsBlock;
 };
 
 
 class Function : public Statement{
 public:
-    Function(std::list<std::pair<std::string*,int*>*>* arg, int* ret, Block* b, string* n){
+    Function(std::list<std::pair<std::string*,int*>*>* arg, int* ret, Block* b, string* n,std::list<int>* mB){
+        myBlocks = mB;
         statementType = 6;
         arguments = arg;
         returnType = ret;
@@ -568,8 +544,16 @@ public:
     void setName(string *name) {
         Function::name = name;
     }
+    list<int> *getMyBlocks() const {
+        return myBlocks;
+    }
+
+    void setMyBlocks(list<int> *myBlocks) {
+        Function::myBlocks = myBlocks;
+    }
 
 private:
+    std::list<int>* myBlocks;
     string* name;
     int* returnType;
     Block* block;
@@ -583,12 +567,12 @@ public:
     explicit Parser(Scan* scan);
     ~Parser();
     void Program();
-    int getCurrentRange() const;
     void SemanticError(int ecode);
    // const PTree &getMainTree() const;
 private:
     Scan* scan;
-    int currentRange = 0;
+    std::list<int> currentRangeList;
+    int rangeNumber = 0;
     Block* mainBlock;
 public:
     Block *getMainBlock() const;
@@ -619,7 +603,7 @@ private:
     Condition* parse_condition();
     Comparision* parse_comparision();
     Expression* parse_formula();
-    Expression* parse_expressionHigh();
+    //Expression* parse_expressionHigh();
     std::list<std::pair<std::string*,int*>*>* parse_arguments();
     Ident* parse_ident();
     std::vector<std::vector<Expression*>*>* parse_matrixValue();

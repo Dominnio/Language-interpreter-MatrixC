@@ -1,26 +1,17 @@
 {
     public int ZmiennaInt;
     public matrix ZmiennaMatrix;
-    public matrix ZmiennaMatrix;
-    function mani() : int {}
-    function main() : int
-    {
-        private int InnaZmiennaInt;
-        ZmiennaInt := 10;
-        InnaZmiennaInt := 20;
-        ZmiennaMatrix := [0,0,0:0,0,0];
-        if(ZmiennaInt > InnaZmiennaInt)
+    private int ZmiennaInt;
+    function main() : int {
+        public int KolejnaZmiennaInt;
         {
-            private int InnaZmiennaInt;
-            ZmiennaMatrix := [1,1,1:2,2,2];
+            public int a;
+            public int b;
+            b := 12;
+            a := 5+6*5+b;
         }
-        else
         {
-            while(ZmiennaInt < InnaZmiennaInt)
-            {
-                ZmiennaInt := ZmiennaInt + 1;
-                ZmiennaMatrix := ZmiennaMatrix + [1,1,1:2,3,4];
-            }
+            private int a;
         }
     }
 }
