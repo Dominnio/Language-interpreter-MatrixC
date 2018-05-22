@@ -18,11 +18,15 @@ struct MyException : public exception
 {
     virtual const char * what () const throw ()
     {
-        return "Zgloszono wyjatek\n";
+        return "";
+        //return "Zgloszono wyjatek\n";
     }
 };
 
 class Value;
+class FunctionCall;
+class Statement;
+class Block;
 
 class Expression{
 public:
@@ -37,73 +41,48 @@ public:
     list<int> *getOpers() const {
         return opers;
     }
-
-    void setOpers(list<int> *opers) {
-        Expression::opers = opers;
-    }
 private:
     // 0 - '*'     1 - '/'    2 - '+'     3 - '-'
     std::list<Value*>* vals;
     std::list<int>* opers;
-
 };
-
-class FunctionCall;
 
 class Ident{
 public:
-    Ident(string* val){
+    Ident(string* n){
         type = new int(0);
-        name = val;
+        name = n;
     }
-    Ident(std::pair<Value*,Value*>* val){
+    Ident(std::pair<Expression*,Expression*>* val,string* n){
         type = new int(1);
         position = val;
+        name = n;
     }
-    Ident(FunctionCall* val){
+    Ident(FunctionCall* val, string* n){
         type = new int(2);
         nameAndArg = val;
+        name = n;
     }
-private:
-    int* type;
-public:
     int *getType() const {
         return type;
     }
-
-    void setType(int *type) {
-        Ident::type = type;
-    }
-
     string *getName() const {
         return name;
     }
-
-    void setName(string *name) {
-        Ident::name = name;
-    }
-
-    pair<Value *, Value *> *getPosition() const {
+    std::pair<Expression*,Expression*> *getPosition() const {
         return position;
     }
-
-    void setPosition(pair<Value *, Value *> *position) {
-        Ident::position = position;
-    }
-
     FunctionCall *getNameAndArg() const {
         return nameAndArg;
-    }
-
-    void setNameAndArg(FunctionCall *nameAndArg) {
-        Ident::nameAndArg = nameAndArg;
     }
 
 private:
     // 0 zwykły - ala, 1 macierz - ala[2][3], 2 funckja - ala(1)
     string* name;
-    std::pair<Value*,Value*>*  position;
+    std::pair<Expression*,Expression*>*  position;
     FunctionCall* nameAndArg;
+    int* type;
+
 };
 
 class Value{
@@ -123,59 +102,51 @@ public:
         *type = 2;
         identValue = v;
     }
-private:
-    int* type;
-public:
     int *getType() const {
         return type;
     }
-
     void setType(int *type) {
         Value::type = type;
     }
-
     int *getIntValue() const {
         return intValue;
     }
-
     void setIntValue(int *intValue) {
         Value::intValue = intValue;
     }
-
     Ident *getIdentValue() const {
         return identValue;
     }
-
     void setIdentValue(Ident *identValue) {
         Value::identValue = identValue;
     }
-
     vector<vector<Expression *> *> *getMatrixValue() const {
         return matrixValue;
     }
-
     void setMatrixValue(vector<vector<Expression *> *> *matrixValue) {
         Value::matrixValue = matrixValue;
     }
-
 private:
     // może być trzech typów
     int* intValue;       // albo poprzez po prostu warotść np. 10
     Ident* identValue;           // albo poprzez identyfikator na trzy sposoby np. 'ola' 'ola[1,1]', ola(12)
     std::vector<std::vector<Expression*>*>* matrixValue; // albo poprzez wartość macierzową np. [13,a:b,11,c]
+    int* type;
 };
-class Statement;
-
 class FunctionCall{
 public:
+    FunctionCall(){
+        argList = nullptr;
+    }
     FunctionCall( std::list<Expression*>* arg){
-        argList = arg;
+        if(arg->size() == 0 ){
+            argList = nullptr;
+        }else {
+            argList = arg;
+        }
     }
     list<Expression *> *getArgList() const {
         return argList;
-    }
-    void setArgList(list<Expression *> *argList) {
-        FunctionCall::argList = argList;
     }
 private:
     std::list<Expression*>* argList;
@@ -188,45 +159,29 @@ public:
         left = le;
         right = ri;
     }
-private:
-    int* oper;
-public:
     int *getOper() const {
         return oper;
     }
-
     void setOper(int *oper) {
         Comparision::oper = oper;
     }
-
     Expression *getRight() const {
         return right;
     }
-
     void setRight(Expression *right) {
         Comparision::right = right;
     }
-
     Expression *getLeft() const {
         return left;
     }
-
-    void setLeft(Expression *left) {
-        Comparision::left = left;
-    }
-
-    bool *getResult() const {
-        return result;
-    }
-
     void setResult(bool *result) {
         Comparision::result = result;
     }
-
 private:
     Expression* right;
     Expression* left;
     bool* result;
+    int* oper;
 };
 
 class Condition{
@@ -234,29 +189,13 @@ public:
     Condition(std::list<std::pair<Comparision*,int*>>* comparisionAndO){
         comparisionAndOp = comparisionAndO;
     }
-    bool *getResult() const {
-        return result;
-    }
-
-    void setResult(bool *result) {
-        Condition::result = result;
-    }
-
     list<pair<Comparision *, int *>> *getComparisionAndOp() const {
         return comparisionAndOp;
     }
-
-    void setComparisionAndOp(list<pair<Comparision *, int *>> *comparisionAndOp) {
-        Condition::comparisionAndOp = comparisionAndOp;
-    }
-
 private:
     std::list<std::pair<Comparision*,int*>>* comparisionAndOp;
     bool* result;
 };
-
-class Block;
-class IfStatement;
 
 class Statement{
 public:
@@ -289,33 +228,28 @@ private:
 
 class ReturnStatement : public Statement{
 public:
-    ReturnStatement(Value* v ){
+    ReturnStatement(Expression* v ){
         statementType = 5;
         val = v;
     }
-    Value *getVal() const {
+    Expression* getVal() const {
         return val;
     }
-    void setVal(Value *val) {
-        ReturnStatement::val = val;
-    }
 private:
-    Value* val;
+    Expression* val;
 };
 
 class AssigmentOrFunctionCall : public Statement{
 public:
     AssigmentOrFunctionCall(string* n,Expression* a ){
         statementType = 1;
-        type = new int;
-        *type = 0;
+        type = new int(0);
         name= n;
         expression = a;
     }
     AssigmentOrFunctionCall(string* n, FunctionCall* funCall ){
         statementType = 1;
-        type = new int;
-        *type = 1;
+        type = new int(1);
         name = n;
         functionCall = funCall;
     }
@@ -323,35 +257,27 @@ public:
     int *getType() const {
         return type;
     }
-
     void setType(int *type) {
         AssigmentOrFunctionCall::type = type;
     }
-
     string *getName() const {
         return name;
     }
-
     void setName(string *name) {
         AssigmentOrFunctionCall::name = name;
     }
-
     FunctionCall *getFunctionCall() const {
         return functionCall;
     }
-
     void setFunctionCall(FunctionCall *functionCall) {
         AssigmentOrFunctionCall::functionCall = functionCall;
     }
-
     Expression *getExpression() const {
         return expression;
     }
-
     void setAssign(Expression *exp) {
         AssigmentOrFunctionCall::expression = exp;
     }
-
 private:
     string* name;
     FunctionCall* functionCall;
@@ -371,27 +297,21 @@ public:
     int *getType() const {
         return type;
     }
-
     void setType(int *type) {
         Declaration::type = type;
     }
-
     std::list<int> *getRange() const {
         return range;
     }
-
     void setRange(std::list<int> *range) {
         Declaration::range = range;
     }
-
     string *getName() const {
         return name;
     }
-
     void setName(string *name) {
         Declaration::name = name;
     }
-
 private:
     // 0 - int, 1 - matrix
     std::list<int>* range;
@@ -406,23 +326,18 @@ public:
         condition = cond;
         block = b;
     }
-public:
     Condition *getCondition() const {
         return condition;
     }
-
     void setCondition(Condition *condition) {
         WhileStatement::condition = condition;
     }
-
     Block *getBlock() const {
         return block;
     }
-
     void setBlock(Block *block) {
         WhileStatement::block = block;
     }
-
 private:
     Block* block;
     Condition* condition;
@@ -436,32 +351,24 @@ public:
         block = b;
         elseBlock = eB;
     }
-
-public:
     Condition *getCondition() const {
         return condition;
     }
-
     void setCondition(Condition *condition) {
         IfStatement::condition = condition;
     }
-
     Block *getBlock() const {
         return block;
     }
-
     void setBlock(Block *block) {
         IfStatement::block = block;
     }
-
     Block *getElseBlock() const {
         return elseBlock;
     }
-
     void setElseBlock(Block *elseBlock) {
         IfStatement::elseBlock = elseBlock;
     }
-
 private:
     Block* block;
     Block* elseBlock;
@@ -476,33 +383,25 @@ public:
         statementsNumbers = stN;
         statementsBlock = statements;
     }
-public:
     std::list<int> getNumber() const {
         return number;
     }
-
     void setNumber(std::list<int> number) {
         Block::number = number;
     }
-
     list<Statement *> *getStatementsBlock() const {
         return statementsBlock;
     }
-
     void setStatementsBlock(list<Statement *> *statementsBlock) {
         Block::statementsBlock = statementsBlock;
     }
     const list<int> &getStatementsNumbers() const {
         return statementsNumbers;
     }
-
     void setStatementsNumbers(const list<int> &statementsNumbers) {
         Block::statementsNumbers = statementsNumbers;
     }
-
-
 private:
-    int statementType;
     std::list<int> number;
     std::list<int> statementsNumbers;
     std::list<Statement*>* statementsBlock;
@@ -511,8 +410,7 @@ private:
 
 class Function : public Statement{
 public:
-    Function(std::list<std::pair<std::string*,int*>*>* arg, int* ret, Block* b, string* n,std::list<int>* mB){
-        myBlocks = mB;
+    Function(std::list<std::pair<std::string*,int*>*>* arg, int* ret, Block* b, string* n){ ;
         statementType = 6;
         arguments = arg;
         returnType = ret;
@@ -520,46 +418,36 @@ public:
         name = n;
         setStatementType(6);
     }
-public:
     list<pair<string *, int *> *> *getArguments() const {
         return arguments;
     }
-
     void setArguments(list<pair<string *, int *> *> *arguments) {
         Function::arguments = arguments;
     }
-
     int *getReturnType() const {
         return returnType;
     }
-
     void setReturnType(int *returnType) {
         Function::returnType = returnType;
     }
-
     Block *getBlock() const {
         return block;
     }
-
     void setBlock(Block *block) {
         Function::block = block;
     }
-
     string *getName() const {
         return name;
     }
-
     void setName(string *name) {
         Function::name = name;
     }
     list<int> *getMyBlocks() const {
         return myBlocks;
     }
-
     void setMyBlocks(list<int> *myBlocks) {
         Function::myBlocks = myBlocks;
     }
-
 private:
     std::list<int>* myBlocks;
     string* name;
@@ -574,18 +462,13 @@ class Parser
 public:
     explicit Parser(Scan* scan);
     ~Parser();
-    void Program();
-    void SemanticError(int ecode);
-   // const PTree &getMainTree() const;
+    bool Program();
+    Block *getMainBlock() const;
 private:
     Scan* scan;
     std::list<int> currentRangeList;
     int rangeNumber = 0;
     Block* mainBlock;
-public:
-    Block *getMainBlock() const;
-
-private:
     SymType lastSymbol; // ostatnio pobrany atom ze scanner'a
     bool can_parse; // jeśli synchronizacja OK
     enum{ FirstSyntaxError=10, FirstSemanticError=60 };
@@ -611,12 +494,11 @@ private:
     Condition* parse_condition();
     Comparision* parse_comparision();
     Expression* parse_formula();
-    //Expression* parse_expressionHigh();
     std::list<std::pair<std::string*,int*>*>* parse_arguments();
     Ident* parse_ident();
     std::vector<std::vector<Expression*>*>* parse_matrixValue();
     std::vector<Expression*>* parse_matrixRow();
-    std::pair<Value*,Value*>* parse_matrixPosition();
+    std::pair<Expression*,Expression*>* parse_matrixPosition();
     Value* parse_value();
     Declaration* parse_declaration();
     int* parse_type();
@@ -625,6 +507,5 @@ private:
     PrintStatement* parse_printStatement();
 
 };
-
 
 #endif //LANGUAGE_INTERPRETER_MATRIXC_PARSER_H

@@ -34,44 +34,39 @@ void Parser::SyntaxError1(int atom) {
     scan->ScanError(FirstSyntaxError+atom,"Nieoczekiwany symbol: ", AT[atom]);
 }
 
-void Parser::SemanticError(int ecode) {
-
-}
-
-void Parser::Program() {
+bool Parser::Program() {
     Nexts();
-    mainBlock = parse_mainBlock();
+    try {
+        mainBlock = parse_mainBlock();
+        return true;
+    }catch (exception& e){
+        std::cout << e.what() <<std::endl;
+        return false;
+    }
 }
 
 Parser::~Parser() = default;
-/*
- * mainBlock to blok od którego rozpoczynamy parsowanie
- * Tylko w tym bloku możemy deklarować funkcje (nigdzie indziej)
- * W tym bloku możemy zadelkarować zmienne
- * Nie możemy w tym bloku tworzyć pętli, warunków, czy też innych bloków
- * W tym bloku musi znaleźć się funkcja main od której rozpocznie się wykonanie programu.
- */
-
-
 
 FunctionCall* Parser::parse_functionCall() {
     //std::cout << "parsowanie functionCall\n"<<flush;
+    std::list<Expression*>* list;
     try {
         accept(lparent);
-        std::list<Expression*>* list = parse_functionArguments();
+        list = parse_functionArguments();
         accept(rparent);
         return new FunctionCall(list);
     }catch (exception& e){
-        std::cout << e.what() << std::endl;
+        std::cout << e.what() <<std::endl; throw MyException();
     }
 }
 
 AssigmentOrFunctionCall* Parser::parse_assigmentOrFunctionCall() {
     //std::cout << "parsowanie assigmentOrFunctionCall\n"<<flush;
+    FunctionCall* functionCall;
+    Expression* exp;
+    string* name;
     try {
-        FunctionCall* functionCall;
-        Expression* exp;
-        string* name = parse_identOnlyString();
+        name = parse_identOnlyString();
         switch (lastSymbol) {
             case SymType::becomes :
                 exp = parse_assigment();
@@ -83,16 +78,15 @@ AssigmentOrFunctionCall* Parser::parse_assigmentOrFunctionCall() {
                 return new AssigmentOrFunctionCall(name,functionCall);
         }
     }catch (exception & e){
-        std::cout << e.what() << std::endl;
+        std::cout << e.what() <<std::endl; throw MyException();
     }
 }
 
-
 Block* Parser::parse_mainBlock() {
     //std::cout << "parsowanie mainBlock\n"<<flush;
+    int type;
     auto statementsList = new std::list<Statement*>;
     std::list<int> statementsNumebr;
-    int type;
     currentRangeList.push_back(rangeNumber);
     rangeNumber++;
     auto thisBlockList = currentRangeList;
@@ -124,16 +118,15 @@ Block* Parser::parse_mainBlock() {
             statementsNumebr.push_back(type);
         }
     }catch (exception& e){
-        std::cout << e.what() << std::endl;
+        std::cout << e.what() <<std::endl; throw MyException();
     }
 }
 
-
 Block*  Parser::parse_functionBlock() {
     //std::cout << "parsowanie functionBlock\n"<<flush;
+    int type;
     currentRangeList.push_back(rangeNumber);
     std::list<int> statementsNumebr;
-    int type;
     rangeNumber++;
     auto thisBlockList = currentRangeList;
     auto statementsList = new std::list<Statement*>;
@@ -181,7 +174,8 @@ Block*  Parser::parse_functionBlock() {
             statementsNumebr.push_back(type);
         }
     }catch (exception& e){
-        std::cout << e.what() << std::endl;
+        delete statementsList;
+        std::cout << e.what() <<std::endl; throw MyException();
     }
 }
 
@@ -189,11 +183,11 @@ PrintStatement* Parser::parse_printStatement(){
     //std::cout << "parsowanie printStatement\n"<<flush;
     try {
         accept(printsy);
-        Expression* expresionToPrint = parse_formula();
+        auto expresionToPrint = parse_formula();
         accept(semicolon);
         return new PrintStatement(expresionToPrint);
     }catch (exception& e){
-        std::cout << e.what() << std::endl;
+        std::cout << e.what() <<std::endl; throw MyException();
     }
 }
 
@@ -201,22 +195,16 @@ Function* Parser::parse_function() {
     //std::cout << "parsowanie function\n"<<flush;
     try {
         accept(functionsy);
-        string* name = parse_identOnlyString();
+        auto name = parse_identOnlyString();
         accept(lparent);
         std::list<std::pair<std::string*,int*>*>* list = parse_arguments();
         accept(rparent);
         accept(colon);
-        int* type = parse_type();
-        int firstBlock = rangeNumber;
-        Block* block = parse_functionBlock();
-        int lastBlock = rangeNumber;
-        auto myBlock = new std::list<int>;
-        for(int i=firstBlock;i<=lastBlock;i++){
-            myBlock->push_back(i);
-        }
-        return new Function(list,type, block,name,myBlock);
+        auto type = parse_type();
+        auto block = parse_functionBlock();
+        return new Function(list,type, block,name);
     }catch (exception& e){
-        std::cout << e.what() << std::endl;
+        std::cout << e.what() <<std::endl; throw MyException();
     }
 }
 
@@ -226,7 +214,7 @@ std::list<Expression*>* Parser::parse_functionArguments() {  // argumenty podawa
     auto list = new std::list<Expression*>;
     try {
         while (true){
-            switch (lastSymbol) {
+            switch(lastSymbol) {
                 case SymType::ident:
                     list->push_back(parse_formula());
                     break;
@@ -235,34 +223,39 @@ std::list<Expression*>* Parser::parse_functionArguments() {  // argumenty podawa
                     break;
                 case SymType::rparent :
                     return list;
+                default:
+                    throw MyException();
             }
             if(!(lastSymbol == rparent)){
                 accept(comma);
             }
         }
     }catch (exception& e){
-        std::cout << e.what() << std::endl;
+        delete list;
+        std::cout << e.what() <<std::endl; throw MyException();
     }
-    return list;
+
 }
 
 
 ReturnStatement* Parser::parse_returnStatement() {
     //std::cout << "parsowanie returnStatement\n"<<flush;
-    Value* value;
+    Expression* expression;
     try {
         accept(returnsy);
         switch (lastSymbol) {
             case SymType::intconst :
-                value = new Value(parse_intconst());
+                expression = parse_formula();
+                accept(semicolon);
+                return new ReturnStatement(expression);
             default:
-                value = parse_value();
+                expression = parse_formula();
+                accept(semicolon);
+                return new ReturnStatement(expression);
         }
-        accept(semicolon);
     }catch (exception& e){
-        std::cout << e.what() << std::endl;
+        std::cout << e.what() <<std::endl; throw MyException();
     }
-    return new ReturnStatement(value);
 }
 
 WhileStatement* Parser::parse_whileStatement() {
@@ -270,12 +263,12 @@ WhileStatement* Parser::parse_whileStatement() {
     try {
         accept(whilesy);
         accept(lparent);
-        Condition* con = parse_condition();
+        auto con = parse_condition();
         accept(rparent);
-        Block* block = parse_block();
+        auto block = parse_block();
         return new WhileStatement(con,block);
     }catch (exception& e){
-        std::cout << e.what() << std::endl;
+        std::cout << e.what() <<std::endl; throw MyException();
     }
 }
 
@@ -285,23 +278,16 @@ IfStatement* Parser::parse_ifStatement() {
     try {
         accept(ifsy);
         accept(lparent);
-        Condition* con = parse_condition();
+        auto con = parse_condition();
         accept(rparent);
-        Block* block = parse_block();
+        auto block = parse_block();
         accept(elsesy);
-        Block* elseBlock = parse_block();
+        auto elseBlock = parse_block();
         return new IfStatement(con,block,elseBlock);
     }catch (exception& e){
-        std::cout << e.what() << std::endl;
+        std::cout << e.what() <<std::endl; throw MyException();
     }
 }
-
-/*
- * block to zwykły blok (nie blok funkcji (bo musi być return))
- * W tym bloku niemożemy deklarować funkcji
- * W tym bloku możemy zadelkarować zmienne publiczne i prywatne
- * W tym bloku możemy tworzyć while, ify, inne bloki (np. aby ograniczać widok zmiennych)
- */
 
 Block* Parser::parse_block() {
     //std::cout << "parsowanie block\n"<<flush;
@@ -351,42 +337,40 @@ Block* Parser::parse_block() {
             statementsNumebr.push_back(type);
         }
     }catch (exception& e){
-        std::cout << e.what() << std::endl;
+        delete statementsList;
+        std::cout << e.what() <<std::endl; throw MyException();
     }
 }
 
 Condition* Parser::parse_condition() {
     //std::cout << "parsowanie condition\n"<<flush;
-    std::list<std::pair<Comparision*,int*>>* list = new std::list<std::pair<Comparision*,int*>>;
+    auto list = new std::list<std::pair<Comparision*,int*>>;
     try {
-        int* type = new int;
         while (true){
             Comparision* comparision = parse_comparision();
             switch (lastSymbol) {
                 case SymType::andop:
                     accept(andop);
-                    *type = 0;
-                    list->push_back(make_pair(comparision,type));
+                    list->push_back(make_pair(comparision,new int(0)));
                     break;
                 case SymType::orop:
                     accept(orop);
-                    *type = 1;
-                    list->push_back(make_pair(comparision,type));
+                    list->push_back(make_pair(comparision,new int(1)));
                     break;
                 default :
-                    *type = 2;
-                    list->push_back(make_pair(comparision,type));
+                    list->push_back(make_pair(comparision,new int(2)));
                     return new Condition(list);
             }
         }
     }catch (exception& e){
-        std::cout << e.what() << std::endl;
+        delete list;
+        std::cout << e.what() <<std::endl; throw MyException();
     }
 }
 
 Comparision* Parser::parse_comparision() {
     //std::cout << "parsowanie comparision\n"<<flush;
-    int* oper = new int;
+    auto oper = new int;
     Expression* left;
     Expression* right;
     try {
@@ -422,10 +406,10 @@ Comparision* Parser::parse_comparision() {
         right = parse_formula();
         return new Comparision(oper,left,right);
     }catch (exception& e){
-        std::cout << e.what() << std::endl;
+        delete oper;
+        std::cout << e.what() <<std::endl; throw MyException();
     }
 }
-
 
 Expression* Parser::parse_assigment() {
     //std::cout << "parsowanie assigment\n"<<flush;
@@ -434,17 +418,17 @@ Expression* Parser::parse_assigment() {
         Expression* expr = parse_formula();
         return expr;
     }catch (exception& e){
-        std::cout << e.what() << std::endl;
+        std::cout << e.what() <<std::endl; throw MyException();
     }
 }
 
 
 Expression* Parser::parse_formula() {
     //std::cout << "parsowanie formula\n"<<flush;
+    auto vals = new std::list<Value*>;
+    auto opers = new std::list<int>;
     try {
-        auto vals = new std::list<Value*>;
         vals->push_back(parse_value());
-        auto opers = new std::list<int>;
         while(true) {
             switch (lastSymbol) {
                 case SymType::plusop :
@@ -472,36 +456,11 @@ Expression* Parser::parse_formula() {
             }
         }
     }catch (exception & e){
-        std::cout << e.what() << std::endl;
+        delete vals;
+        delete opers;
+        std::cout << e.what() <<std::endl; throw MyException();
     }
 }
-/*
-Expression* Parser::parse_expressionHigh() {
-    //std::cout << "parsowanie expressionHigh\n"<<flush;
-    try {
-        Value* left = parse_value();
-        int * type = new int;
-        Expression* exp = nullptr;
-        switch(lastSymbol){
-            case SymType::times :
-                accept(times);
-                *type = 0;
-                exp = new Expression(parse_expressionHigh(),type,left);
-                break;
-            case SymType::divop:
-                accept(divop);
-                *type = 1;
-                exp = new Expression(parse_expressionHigh(),type,left);
-                break;
-            default:
-                return nullptr;
-        }
-        return exp;
-    }catch (exception & e){
-        std::cout << e.what() << std::endl;
-    }
-}
-*/
 
 std::list<std::pair<std::string*,int*>*>* Parser::parse_arguments() { // argumenty podawane przy tworzeniu funkcji
     //std::cout << "parsowanie arguments\n"<<flush;
@@ -526,26 +485,30 @@ std::list<std::pair<std::string*,int*>*>* Parser::parse_arguments() { // argumen
             }
         }
     }catch (exception& e){
-        std::cout << e.what() << std::endl;
+        delete argList;
+        std::cout << e.what() <<std::endl; throw MyException();
     }
     return argList;
 }
 
-// tutaj trzeba też obsłużyć np. a[4][6] - też identfkator oraz f(123)
 Ident* Parser::parse_ident() {
     //std::cout << "parsowanie ident\n"<<flush;
     auto id = new string(scan->Spell());
-    accept(ident);
-    if(lastSymbol == laccessop){
-        std::pair<Value*,Value*>* pos = parse_matrixPosition();
-        return new Ident(pos);
-    }else{
-        if(lastSymbol == lparent){
-            FunctionCall* val = parse_functionCall();
-            return new Ident(val);
+    try {
+        accept(ident);
+        if (lastSymbol == laccessop) {
+            std::pair<Expression *, Expression *> *pos = parse_matrixPosition();
+            return new Ident(pos, id);
+        } else {
+            if (lastSymbol == lparent) {
+                FunctionCall *val = parse_functionCall();
+                return new Ident(val, id);
+            }
         }
+        return new Ident(id);
+    }catch(exception& e){
+        std::cout << e.what() <<std::endl; throw MyException();
     }
-    return new Ident(id);
 }
 
 Value* Parser::parse_value() {
@@ -560,7 +523,7 @@ Value* Parser::parse_value() {
                 return new Value(parse_ident());
         }
     }catch (exception& e){
-        std::cout << e.what() << std::endl;
+        std::cout << e.what() <<std::endl; throw MyException();
     }
 }
 
@@ -580,7 +543,7 @@ std::vector<std::vector<Expression*>*>* Parser::parse_matrixValue() {
             }
         }
     }catch (exception & e){
-        std::cout << e.what() << std::endl;
+        std::cout << e.what() <<std::endl; throw MyException();
     }
     return vec;
 }
@@ -605,22 +568,22 @@ std::vector<Expression*>* Parser::parse_matrixRow() {
             }
         }
     }catch (exception & e){
-        std::cout << e.what() << std::endl;
+        std::cout << e.what() <<std::endl; throw MyException();
     }
     return vec;
 }
 
-std::pair<Value*,Value*>* Parser::parse_matrixPosition() {
+std::pair<Expression*,Expression*>* Parser::parse_matrixPosition() {
     //std::cout << "parsowanie matrixPosition\n"<<flush;
-    auto p = new std::pair<Value*,Value*>;
+    auto p = new std::pair<Expression*,Expression*>;
     try {
         accept(laccessop);
-        p->first = parse_value();
+        p->first = parse_formula();
         accept(comma);
-        p->second = parse_value();
+        p->second = parse_formula();
         accept(raccessop);
     }catch (exception & e){
-        std::cout << e.what() << std::endl;
+        std::cout << e.what() <<std::endl; throw MyException();
     }
     return p;
 }
@@ -628,56 +591,72 @@ std::pair<Value*,Value*>* Parser::parse_matrixPosition() {
 Declaration* Parser::parse_declaration() {
     //std::cout << "parsowanie declaration\n"<<flush;
     auto range = new std::list<int>;
-    for(auto iter = currentRangeList.begin(); iter != currentRangeList.end(); iter++){
-        range->push_back(*iter);
-    }
-    auto type = new int;
-    auto name  = new string;
     try {
-        switch (lastSymbol) {
-            case SymType::publicsy :
-                range->clear();
-                range->push_back(0);
-                accept(publicsy);
-                break;
-            default :
-                accept(privatesy);
-                break;
+        for (auto iter = currentRangeList.begin(); iter != currentRangeList.end(); iter++) {
+            range->push_back(*iter);
         }
-        type = parse_type();
-        name = parse_identOnlyString();
-        accept(semicolon);
-    }catch (exception & e){
-        std::cout << e.what() << std::endl;
+        auto type = new int;
+        auto name = new string;
+        try {
+            switch (lastSymbol) {
+                case SymType::publicsy :
+                    range->clear();
+                    range->push_back(0);
+                    accept(publicsy);
+                    break;
+                default :
+                    accept(privatesy);
+                    break;
+            }
+            type = parse_type();
+            name = parse_identOnlyString();
+            accept(semicolon);
+        } catch (exception &e) {
+            std::cout << e.what() <<std::endl; throw MyException();
+        }
+        return new Declaration(type, range, name);
+    }catch(exception& e){
+        std::cout << e.what() <<std::endl; throw MyException();
     }
-    return new Declaration(type,range,name);
 }
 
 
 int* Parser::parse_type() {
     //std::cout << "parsowanie type\n"<<flush;
-    switch (lastSymbol) {
-        case SymType::intsy :
-            accept(intsy);
-            return new int(0);
-        default :
-            accept(matrixsy);
-            return new int(1);
+    try {
+        switch (lastSymbol) {
+            case SymType::intsy :
+                accept(intsy);
+                return new int(0);
+            default :
+                accept(matrixsy);
+                return new int(1);
+        }
+    }catch(exception& e){
+        std::cout << e.what() <<std::endl; throw MyException();
     }
 }
 
 string* Parser::parse_identOnlyString() {
     //std::cout << "parsowanie identOnlyString\n"<<flush;
-    string* id = new string(scan->Spell());
-    accept(ident);
-    return id;
+    try {
+        string* id = new string(scan->Spell());
+        accept(ident);
+        return id;
+    }catch(exception& e){
+        std::cout << e.what() <<std::endl; throw MyException();
+    }
 }
 
 int* Parser::parse_intconst() {
     //std::cout << "parsowanie intconst\n"<<flush;
-    auto c = new int(scan->IntConst());
-    accept(intconst);
-    return c;
+    try {
+        auto c = new int(scan->IntConst());
+        accept(intconst);
+        return c;
+    }catch(exception& e){
+    std::cout << e.what() <<std::endl; throw MyException();
+}
 }
 
 

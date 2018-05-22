@@ -12,6 +12,10 @@
 
 class Val{
 public:
+    Val(){};
+    Val(int t){
+        type = t;
+    }
     const string &getName() const {
         return name;
     }
@@ -21,6 +25,10 @@ public:
     int getType() const {
         return type;
     }
+    void setRange(list<int> *range) {
+        Val::range = range;
+    }
+
 protected:
     string name;
     std::list<int>* range;
@@ -29,16 +37,16 @@ protected:
 
 class MatrixVal : public Val{
 public:
-    MatrixVal(string n, std::list<int>* r, int t, vector<vector<int>> &v){
+    MatrixVal(string n, std::list<int>* r, int t, vector<vector<int>> v){
         name = n;
         range = r;
         type = t;
         value = v;
     }
-    const vector<vector<int>> &getValue() const {
+    const vector<vector<int>> getValue() const {
         return value;
     }
-    void setValue(const vector<vector<int>> &value) {
+    void setValue(const vector<vector<int>> value) {
         MatrixVal::value = value;
     }
 private:
@@ -66,12 +74,13 @@ private:
 class Fun{
 public:
     Fun(){}
-    Fun(string n, Val* r, Block* b, std::list<Val*> a){
+    Fun(string n, Val* r, Block* b, std::list<Val*>* a){
         name = n;
         retVal = r;
         block = b;
         arguments = a;
         numberOfActivity = 0;
+        isActive = false;
     }
     const string &getName() const {
         return name;
@@ -82,37 +91,48 @@ public:
     Block *getBlock() const {
         return block;
     }
-    std::list<Val*> getArguments() const {
+    std::list<Val*>* getArguments() const {
         return arguments;
+    }
+    void setRetVal(Val *retVal) {
+        Fun::retVal = retVal;
+    }
+    int getNumberOfActivity() const {
+        return numberOfActivity;
+    }
+
+    void setNumberOfActivity(int numberOfActivity) {
+        Fun::numberOfActivity = numberOfActivity;
+    }
+    bool isIsActive() const {
+        return isActive;
+    }
+    void setIsActive(bool isActive) {
+        Fun::isActive = isActive;
     }
 
 private:
     string name;
     Val* retVal;
-    std::list<Val*> arguments;
+    std::list<Val*>* arguments;
     Block* block;
     int numberOfActivity;
+    bool isActive;
+
 };
 
 class executor {
 public:
     vector<vector<int>> execute_matrixValue(Value* value, std::list<int> blockNumber);
-    int execute_matrixPosition(Ident* ident, std::list<int> blockNumber);
     int execute_IntValue(Value* value, std::list<int> blockNumber);
-    void execute_formula(Expression* expression);
-    //int execute_expressionHighInt(Expression* expression, std::list<int> blockNumber);
-    //std::vector<std::vector<Expression*>*> execute_expressionHighMatrix(Expression* expression,std::list<int> blockNumber);
-
     void MainExecute(Parser* parser);
-    void execute_functionCall(AssigmentOrFunctionCall* function, std::list<int> blockNumber);
+    Val* execute_functionCall(AssigmentOrFunctionCall* function, std::list<int> blockNumber);
     void execute_returnStatement (ReturnStatement* returnStatement, std::list<int> blockNumber );
     void execute_assigmentOrFunctionCall(AssigmentOrFunctionCall* assigment, std::list<int> blockNumber);
     void execute_block(Block* block);
     int execute_formulaInt(Expression* expression, std::list<int> blockNumber);
     std::vector<std::vector<int>> execute_formulaMatrix(Expression* expression, std::list<int> blockNumber);
     void execute_function (Function* function, std::list<int> blockNumber);
-
-    // to juz jest w 100% dobrze
     void execute_assigment(AssigmentOrFunctionCall* assigment, std::list<int> blockNumber);
     Val* execute_declaration(Declaration* declaration, std::list<int> blockNumber);
     void execute_ifStatement(IfStatement* ifStatement, std::list<int> blockNumber);
@@ -123,6 +143,7 @@ public:
 private:
     std::list<Val*> values;
     std::list<Fun*> functions;
+    int numberOfActivity = 0;
 };
 
 
