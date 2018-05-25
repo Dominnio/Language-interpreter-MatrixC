@@ -66,22 +66,24 @@ class Scan
         const char *kw; // Slowo kluczowe
         SymType atom; // Odpowiadajacy mu atom
     };
-    static KeyRec KT[NKEYS];// Keyword Table
     Source& src; // Strumien znaków
     int c; // Aktualny znak z src
     TextPos atompos; // Pozycja atomu w tekscie
     int intconstant; // Ostatnia stala
-    char spell[MAXIDLEN+1];// Ostatni ident, przeliterowany
-    void Nextc() { c=src.NextChar(); }
+    string spell;
+    void Nextc() { c = src.NextChar(); }
     bool SkipWhiteSpaceOrComment();
-    static unsigned hash(char *s, unsigned int len);
+    SymType word();
+    SymType number();
+    SymType oper();
+
     // Funkcja mieszajaca dla KT
 public:
     Scan(Source &s):src(s) { Nextc(); }
-    SymType NextSymbol();// Nastêpny atom
+    SymType NextSymbol();
     void ScanError(int ecode, const char *mtxt=0, const char *atxt=0);
     int IntConst() { return intconstant; }
-    const char* Spell(){ return spell; }
+    const string Spell(){ return spell; }
 };
 
 

@@ -1,7 +1,3 @@
-//
-// Created by Dominik on 23.04.2018.
-//
-
 #include "parser.h"
 #include "list"
 #include <exception>
@@ -47,14 +43,13 @@ bool Parser::Program() {
 
 Parser::~Parser() = default;
 
-FunctionCall* Parser::parse_functionCall() {
+FunctionCall Parser::parse_functionCall() {
     //std::cout << "parsowanie functionCall\n"<<flush;
-    std::list<Expression*>* list;
     try {
         accept(lparent);
-        list = parse_functionArguments();
+        auto list = parse_functionArguments();
         accept(rparent);
-        return new FunctionCall(list);
+        return  FunctionCall(list,"",currentRangeList);
     }catch (exception& e){
         std::cout << e.what() <<std::endl; throw MyException();
     }
@@ -62,20 +57,19 @@ FunctionCall* Parser::parse_functionCall() {
 
 AssigmentOrFunctionCall* Parser::parse_assigmentOrFunctionCall() {
     //std::cout << "parsowanie assigmentOrFunctionCall\n"<<flush;
-    FunctionCall* functionCall;
-    Expression* exp;
-    string* name;
     try {
-        name = parse_identOnlyString();
+        auto name = parse_identOnlyString();
+        Expression exp;
         switch (lastSymbol) {
             case SymType::becomes :
                 exp = parse_assigment();
                 accept(semicolon);
-                return new AssigmentOrFunctionCall(name,exp);
+                return new Assigment(exp,name, currentRangeList);
             default :
-                functionCall = parse_functionCall();
+                auto functionCall = parse_functionCall();
+                functionCall.setName(name);
                 accept(semicolon);
-                return new AssigmentOrFunctionCall(name,functionCall);
+                return new FunctionCall(functionCall.getArgList(),name,currentRangeList);
         }
     }catch (exception & e){
         std::cout << e.what() <<std::endl; throw MyException();
@@ -84,142 +78,135 @@ AssigmentOrFunctionCall* Parser::parse_assigmentOrFunctionCall() {
 
 Block* Parser::parse_mainBlock() {
     //std::cout << "parsowanie mainBlock\n"<<flush;
-    int type;
-    auto statementsList = new std::list<Statement*>;
-    std::list<int> statementsNumebr;
-    currentRangeList.push_back(rangeNumber);
-    rangeNumber++;
-    auto thisBlockList = currentRangeList;
+    std::list<Statement*> statementsList;
     try {
         accept(lbracket);
+        currentRangeList.push_back(rangeNumber);
+        rangeNumber++;
+        auto thisBlockList = currentRangeList;
         while (true) {
             switch (lastSymbol) {
                 case SymType::functionsy :
-                    type = 6;
-                    statementsList->push_back(parse_function());
+                    statementsList.push_back(new FunctionDeclaration(parse_function()));
                     break;
                 case SymType::privatesy :
-                    type = 2;
-                    statementsList->push_back(parse_declaration());
+                    statementsList.push_back(new Declaration(parse_declaration()));
                     break;
                 case SymType::publicsy :
-                    type = 2;
-                    statementsList->push_back(parse_declaration());
+                    statementsList.push_back(new Declaration(parse_declaration()));
                     break;
                 case SymType::printsy:
-                    type = 7;
-                    statementsList->push_back(parse_printStatement());
+                    statementsList.push_back(new PrintStatement(parse_printStatement()));
                     break;
                 default :
                     accept(rbracket);
                     currentRangeList.pop_back();
-                    return new Block(statementsList,thisBlockList,statementsNumebr);
+                    Block* block = new Block(statementsList,thisBlockList);
+                    blockList.push_back(block);
+                    return block;
             }
-            statementsNumebr.push_back(type);
         }
     }catch (exception& e){
+        for(auto iter = statementsList.begin(); iter!= statementsList.end(); iter++){
+            delete (*iter);
+        }
         std::cout << e.what() <<std::endl; throw MyException();
     }
 }
 
-Block*  Parser::parse_functionBlock() {
+Block* Parser::parse_functionBlock() {
     //std::cout << "parsowanie functionBlock\n"<<flush;
-    int type;
-    currentRangeList.push_back(rangeNumber);
-    std::list<int> statementsNumebr;
-    rangeNumber++;
-    auto thisBlockList = currentRangeList;
-    auto statementsList = new std::list<Statement*>;
+    std::list<Statement*> statementsList;
     try {
         accept(lbracket);
+        currentRangeList.push_back(rangeNumber);
+        rangeNumber++;
+        auto thisBlockList = currentRangeList;
         while (true) {
             switch (lastSymbol) {
                 case SymType::ident:
-                    type = 1;
-                    statementsList->push_back(parse_assigmentOrFunctionCall());
+                    statementsList.push_back(parse_assigmentOrFunctionCall());
                     break;
                 case SymType::publicsy :
-                    type = 2;
-                    statementsList->push_back(parse_declaration());
+                    statementsList.push_back(new Declaration(parse_declaration()));
                     break;
                 case SymType::privatesy :
-                    type = 2;
-                    statementsList->push_back(parse_declaration());
+                    statementsList.push_back(new Declaration(parse_declaration()));
                     break;
                 case SymType::ifsy:
-                    type = 3;
-                    statementsList->push_back(parse_ifStatement());
+                    statementsList.push_back(new IfStatement(parse_ifStatement()));
                     break;
                 case SymType::whilesy:
-                    type = 4;
-                    statementsList->push_back(parse_whileStatement());
+                    statementsList.push_back(new WhileStatement(parse_whileStatement()));
                     break;
                 case SymType::returnsy:
-                    type = 5;
-                    statementsList->push_back(parse_returnStatement());
+                    statementsList.push_back(new ReturnStatement(parse_returnStatement()));
                     break;
                 case SymType::printsy:
-                    type = 7;
-                    statementsList->push_back(parse_printStatement());
+                    statementsList.push_back(new PrintStatement(parse_printStatement()));
                     break;
                 case SymType::lbracket :
-                    type = 0;
-                    statementsList->push_back(parse_block());
+                    statementsList.push_back(parse_block());
                     break;
                 default :
                     accept(rbracket);
                     currentRangeList.pop_back();
-                    return new Block(statementsList,thisBlockList,statementsNumebr);
+                    Block* block = new Block(statementsList,thisBlockList);
+                    blockList.push_back(block);
+                    return block;
             }
-            statementsNumebr.push_back(type);
         }
     }catch (exception& e){
-        delete statementsList;
+        for(auto iter = statementsList.begin(); iter!= statementsList.end(); iter++){
+            delete (*iter);
+        }
         std::cout << e.what() <<std::endl; throw MyException();
     }
 }
 
-PrintStatement* Parser::parse_printStatement(){
+PrintStatement Parser::parse_printStatement(){
     //std::cout << "parsowanie printStatement\n"<<flush;
     try {
         accept(printsy);
         auto expresionToPrint = parse_formula();
         accept(semicolon);
-        return new PrintStatement(expresionToPrint);
+        return PrintStatement(expresionToPrint,currentRangeList);
     }catch (exception& e){
         std::cout << e.what() <<std::endl; throw MyException();
     }
 }
 
-Function* Parser::parse_function() {
+FunctionDeclaration Parser::parse_function() {
     //std::cout << "parsowanie function\n"<<flush;
     try {
         accept(functionsy);
         auto name = parse_identOnlyString();
         accept(lparent);
-        std::list<std::pair<std::string*,int*>*>* list = parse_arguments();
+        auto list = parse_arguments();
         accept(rparent);
         accept(colon);
         auto type = parse_type();
+        auto myBlock = currentRangeList;
+        myBlock.push_back(rangeNumber);
         auto block = parse_functionBlock();
-        return new Function(list,type, block,name);
+        return FunctionDeclaration(list, type, block, name, myBlock ,currentRangeList);
     }catch (exception& e){
         std::cout << e.what() <<std::endl; throw MyException();
     }
 }
 
 
-std::list<Expression*>* Parser::parse_functionArguments() {  // argumenty podawane przy wołaniu funkcji
+std::list<Expression> Parser::parse_functionArguments() {  // argumenty podawane przy wołaniu funkcji
     //std::cout << "parsowanie functionArguments\n"<<flush;
-    auto list = new std::list<Expression*>;
+    std::list<Expression> list;
     try {
         while (true){
             switch(lastSymbol) {
                 case SymType::ident:
-                    list->push_back(parse_formula());
+                    list.push_back(parse_formula());
                     break;
                 case SymType::intconst:
-                    list->push_back(parse_formula());
+                    list.push_back(parse_formula());
                     break;
                 case SymType::rparent :
                     return list;
@@ -231,34 +218,33 @@ std::list<Expression*>* Parser::parse_functionArguments() {  // argumenty podawa
             }
         }
     }catch (exception& e){
-        delete list;
         std::cout << e.what() <<std::endl; throw MyException();
     }
 
 }
 
 
-ReturnStatement* Parser::parse_returnStatement() {
+ReturnStatement Parser::parse_returnStatement() {
     //std::cout << "parsowanie returnStatement\n"<<flush;
-    Expression* expression;
+    Expression expression;
     try {
         accept(returnsy);
         switch (lastSymbol) {
             case SymType::intconst :
                 expression = parse_formula();
                 accept(semicolon);
-                return new ReturnStatement(expression);
+                return  ReturnStatement(expression,currentRangeList);
             default:
                 expression = parse_formula();
                 accept(semicolon);
-                return new ReturnStatement(expression);
+                return  ReturnStatement(expression,currentRangeList);
         }
     }catch (exception& e){
         std::cout << e.what() <<std::endl; throw MyException();
     }
 }
 
-WhileStatement* Parser::parse_whileStatement() {
+WhileStatement Parser::parse_whileStatement() {
     //std::cout << "parsowanie whileStatement\n"<<flush;
     try {
         accept(whilesy);
@@ -266,14 +252,14 @@ WhileStatement* Parser::parse_whileStatement() {
         auto con = parse_condition();
         accept(rparent);
         auto block = parse_block();
-        return new WhileStatement(con,block);
+        return  WhileStatement(con,block,currentRangeList);
     }catch (exception& e){
         std::cout << e.what() <<std::endl; throw MyException();
     }
 }
 
 
-IfStatement* Parser::parse_ifStatement() {
+IfStatement Parser::parse_ifStatement() {
     //std::cout << "parsowanie ifStatement\n"<<flush;
     try {
         accept(ifsy);
@@ -283,7 +269,7 @@ IfStatement* Parser::parse_ifStatement() {
         auto block = parse_block();
         accept(elsesy);
         auto elseBlock = parse_block();
-        return new IfStatement(con,block,elseBlock);
+        return  IfStatement(con,block,elseBlock,currentRangeList);
     }catch (exception& e){
         std::cout << e.what() <<std::endl; throw MyException();
     }
@@ -291,131 +277,123 @@ IfStatement* Parser::parse_ifStatement() {
 
 Block* Parser::parse_block() {
     //std::cout << "parsowanie block\n"<<flush;
-    currentRangeList.push_back(rangeNumber);
-    rangeNumber++;
-    auto thisBlockList = currentRangeList;
-    std::list<int> statementsNumebr;
-    auto statementsList = new std::list<Statement*>;
+    std::list<Statement*> statementsList ;
     try {
-        int type;
         accept(lbracket);
+        currentRangeList.push_back(rangeNumber);
+        rangeNumber++;
+        auto thisBlockList = currentRangeList;
         while (true) {
             switch (lastSymbol) {
                 case SymType::publicsy :
-                    type = 2;
-                    statementsList->push_back(parse_declaration());
+                    statementsList.push_back(new Declaration(parse_declaration()));
                     break;
                 case SymType::privatesy :
-                    type = 2;
-                    statementsList->push_back(parse_declaration());
+                    statementsList.push_back(new Declaration(parse_declaration()));
                     break;
                 case SymType::ifsy:
-                    type = 3;
-                    statementsList->push_back(parse_ifStatement());
+                    statementsList.push_back(new IfStatement(parse_ifStatement()));
                     break;
                 case SymType::whilesy:
-                    type = 4;
-                    statementsList->push_back(parse_whileStatement());
+                    statementsList.push_back(new WhileStatement(parse_whileStatement()));
                     break;
                 case SymType::lbracket :
-                    type = 0;
-                    statementsList->push_back(parse_block());
+                    statementsList.push_back(parse_block());
                     break;
                 case SymType::ident:
-                    type = 1;
-                    statementsList->push_back(parse_assigmentOrFunctionCall());
+                    statementsList.push_back(parse_assigmentOrFunctionCall());
                     break;
                 case SymType::printsy:
-                    type = 7;
-                    statementsList->push_back(parse_printStatement());
+                    statementsList.push_back(new PrintStatement(parse_printStatement()));
                     break;
                 default :
                     accept(rbracket);
                     currentRangeList.pop_back();
-                    return new Block(statementsList,thisBlockList,statementsNumebr);
+                    Block* block = new Block(statementsList,thisBlockList);
+                    blockList.push_back(block);
+                    return block;
             }
-            statementsNumebr.push_back(type);
         }
     }catch (exception& e){
-        delete statementsList;
+        for(auto iter = statementsList.begin(); iter!= statementsList.end(); iter++){
+            delete (*iter);
+        }
         std::cout << e.what() <<std::endl; throw MyException();
     }
 }
 
-Condition* Parser::parse_condition() {
+Condition Parser::parse_condition() {
     //std::cout << "parsowanie condition\n"<<flush;
-    auto list = new std::list<std::pair<Comparision*,int*>>;
+    std::list<std::pair<Comparision,int>> list;
     try {
         while (true){
-            Comparision* comparision = parse_comparision();
+            Comparision comparision = parse_comparision();
             switch (lastSymbol) {
                 case SymType::andop:
                     accept(andop);
-                    list->push_back(make_pair(comparision,new int(0)));
+                    list.push_back(make_pair(comparision,0));
                     break;
                 case SymType::orop:
                     accept(orop);
-                    list->push_back(make_pair(comparision,new int(1)));
+                    list.push_back(make_pair(comparision,1));
                     break;
                 default :
-                    list->push_back(make_pair(comparision,new int(2)));
-                    return new Condition(list);
+                    list.push_back(make_pair(comparision,2));
+                    return  Condition(list,currentRangeList);
             }
         }
     }catch (exception& e){
-        delete list;
         std::cout << e.what() <<std::endl; throw MyException();
     }
 }
 
-Comparision* Parser::parse_comparision() {
+Comparision Parser::parse_comparision() {
     //std::cout << "parsowanie comparision\n"<<flush;
-    auto oper = new int;
-    Expression* left;
-    Expression* right;
     try {
+        int oper;
+        Expression left;
+        Expression right;
         left = parse_formula();
         switch (lastSymbol) {
             case SymType::eqop :
-                *oper = 0;
+                oper = 0;
                 accept(eqop);
                 break;
             case SymType::neop :
-                *oper = 1;
+                oper = 1;
                 accept(neop);
                 break;
             case SymType::leop :
-                *oper = 2;
+                oper = 2;
                 accept(leop);
                 break;
             case SymType::ltop :
-                *oper = 3;
+                oper = 3;
                 accept(ltop);
                 break;
             case SymType::geop :
-                *oper = 4;
+                oper = 4;
                 accept(geop);
                 break;
             case SymType::gtop :
-                *oper = 5;
+                oper = 5;
                 accept(gtop);
                 break;
             default:
                 break;
         }
         right = parse_formula();
-        return new Comparision(oper,left,right);
+        return  Comparision(oper,left,right,currentRangeList);
     }catch (exception& e){
-        delete oper;
         std::cout << e.what() <<std::endl; throw MyException();
     }
 }
 
-Expression* Parser::parse_assigment() {
+Expression Parser::parse_assigment() {
     //std::cout << "parsowanie assigment\n"<<flush;
     try {
         accept(becomes);
-        Expression* expr = parse_formula();
+        Expression expr = parse_formula();
         return expr;
     }catch (exception& e){
         std::cout << e.what() <<std::endl; throw MyException();
@@ -423,89 +401,85 @@ Expression* Parser::parse_assigment() {
 }
 
 
-Expression* Parser::parse_formula() {
+Expression Parser::parse_formula() {
     //std::cout << "parsowanie formula\n"<<flush;
-    auto vals = new std::list<Value*>;
-    auto opers = new std::list<int>;
+    std::list<Value*> vals;
+    std::list<int> opers;
     try {
-        vals->push_back(parse_value());
+        vals.push_back(parse_value());
         while(true) {
             switch (lastSymbol) {
                 case SymType::plusop :
                     accept(plusop);
-                    opers->push_back(2);
-                    vals->push_back(parse_value());
+                    opers.push_back(2);
+                    vals.push_back(parse_value());
                     break;
                 case SymType::minusop :
                     accept(minusop);
-                    opers->push_back(3);
-                    vals->push_back(parse_value());
+                    opers.push_back(3);
+                    vals.push_back(parse_value());
                     break;
                 case SymType::times :
                     accept(times);
-                    opers->push_back(0);
-                    vals->push_back(parse_value());
+                    opers.push_back(0);
+                    vals.push_back(parse_value());
                     break;
                 case SymType::divop:
                     accept(divop);
-                    opers->push_back(1);
-                    vals->push_back(parse_value());
+                    opers.push_back(1);
+                    vals.push_back(parse_value());
                     break;
                 default:
-                    return new Expression(vals,opers);
+                    return Expression(vals,opers);
             }
         }
     }catch (exception & e){
-        delete vals;
-        delete opers;
+        for(auto iter = vals.begin(); iter != vals.end(); iter++){
+            delete *iter;
+        }
         std::cout << e.what() <<std::endl; throw MyException();
     }
 }
 
-std::list<std::pair<std::string*,int*>*>* Parser::parse_arguments() { // argumenty podawane przy tworzeniu funkcji
+std::list<std::pair<std::string,int>> Parser::parse_arguments() { // argumenty podawane przy tworzeniu funkcji
     //std::cout << "parsowanie arguments\n"<<flush;
-    std::pair<std::string*,int*>* pair;
-    int* type;
-    string* name;
-    auto argList = new std::list<std::pair<std::string*,int*>*>;
+
+    std::list<std::pair<std::string,int>> argList;
     try {
         while (true){
             if(lastSymbol == rparent){
                 break;
             }
-            type = parse_type();
-            name = parse_identOnlyString();
-            pair = new std::pair<std::string*,int*>(name,type);
-            argList->push_back(pair);
+            auto type = parse_type();
+            auto name = parse_identOnlyString();
+            auto pair = make_pair(name,type);
+            argList.push_back(pair);
             if (lastSymbol == SymType::comma) {
                 accept(comma);
                 continue;
             }else{
-                break;
+                return argList;
             }
         }
     }catch (exception& e){
-        delete argList;
         std::cout << e.what() <<std::endl; throw MyException();
     }
-    return argList;
 }
 
 Ident* Parser::parse_ident() {
     //std::cout << "parsowanie ident\n"<<flush;
-    auto id = new string(scan->Spell());
+    auto id =  string(scan->Spell());
     try {
         accept(ident);
         if (lastSymbol == laccessop) {
-            std::pair<Expression *, Expression *> *pos = parse_matrixPosition();
-            return new Ident(pos, id);
+            std::pair<Expression, Expression> pos = parse_matrixPosition();
+            return new MatrixAccessIdent(pos.first, pos.second, id,currentRangeList);
         } else {
             if (lastSymbol == lparent) {
-                FunctionCall *val = parse_functionCall();
-                return new Ident(val, id);
+                return new FunctionIdent(parse_functionCall(), id);
             }
         }
-        return new Ident(id);
+        return new StringIdent(id,currentRangeList);
     }catch(exception& e){
         std::cout << e.what() <<std::endl; throw MyException();
     }
@@ -516,20 +490,20 @@ Value* Parser::parse_value() {
     try {
         switch (lastSymbol) {
             case SymType::intconst :
-                return new Value(parse_intconst());
+                return new IntValue(parse_intconst());
             case SymType::laccessop :
-                return new Value(parse_matrixValue());
+                return new MatrixValue(parse_matrixValue());
             default :
-                return new Value(parse_ident());
+                return new IdentValue(parse_ident());
         }
     }catch (exception& e){
         std::cout << e.what() <<std::endl; throw MyException();
     }
 }
 
-std::vector<std::vector<Expression*>*>* Parser::parse_matrixValue() {
+std::vector<std::vector<Expression>> Parser::parse_matrixValue() {
     //std::cout << "parsowanie matrixValue\n"<<flush;
-    auto vec = new std::vector<std::vector<Expression*>*>;
+    std::vector<std::vector<Expression>> vec;
     try {
         accept(laccessop);
         while(true){
@@ -538,19 +512,18 @@ std::vector<std::vector<Expression*>*>* Parser::parse_matrixValue() {
                     accept(raccessop);
                     return vec;
                 default:
-                    vec->push_back(parse_matrixRow());
+                    vec.push_back(parse_matrixRow());
                     break;
             }
         }
     }catch (exception & e){
         std::cout << e.what() <<std::endl; throw MyException();
     }
-    return vec;
 }
 
-std::vector<Expression*>* Parser::parse_matrixRow() {
+std::vector<Expression> Parser::parse_matrixRow() {
     //std::cout << "parsowanie matrixRow\n"<<flush;
-    auto vec = new std::vector<Expression*>;
+    std::vector<Expression> vec;
     try {
         while(true){
             switch(lastSymbol){
@@ -563,24 +536,23 @@ std::vector<Expression*>* Parser::parse_matrixRow() {
                     accept(comma);
                     break;
                 default:
-                    vec->push_back(parse_formula());
+                    vec.push_back(parse_formula());
                     break;
             }
         }
     }catch (exception & e){
         std::cout << e.what() <<std::endl; throw MyException();
     }
-    return vec;
 }
 
-std::pair<Expression*,Expression*>* Parser::parse_matrixPosition() {
+std::pair<Expression,Expression> Parser::parse_matrixPosition() {
     //std::cout << "parsowanie matrixPosition\n"<<flush;
-    auto p = new std::pair<Expression*,Expression*>;
+    std::pair<Expression,Expression> p;
     try {
         accept(laccessop);
-        p->first = parse_formula();
+        p.first = parse_formula();
         accept(comma);
-        p->second = parse_formula();
+        p.second = parse_formula();
         accept(raccessop);
     }catch (exception & e){
         std::cout << e.what() <<std::endl; throw MyException();
@@ -588,20 +560,20 @@ std::pair<Expression*,Expression*>* Parser::parse_matrixPosition() {
     return p;
 }
 
-Declaration* Parser::parse_declaration() {
+Declaration Parser::parse_declaration() {
     //std::cout << "parsowanie declaration\n"<<flush;
-    auto range = new std::list<int>;
+    std::list<int> range;
     try {
         for (auto iter = currentRangeList.begin(); iter != currentRangeList.end(); iter++) {
-            range->push_back(*iter);
+            range.push_back(*iter);
         }
-        auto type = new int;
-        auto name = new string;
+        int type;
+        string name;
         try {
             switch (lastSymbol) {
                 case SymType::publicsy :
-                    range->clear();
-                    range->push_back(0);
+                    range.clear();
+                    range.push_back(0);
                     accept(publicsy);
                     break;
                 default :
@@ -614,52 +586,56 @@ Declaration* Parser::parse_declaration() {
         } catch (exception &e) {
             std::cout << e.what() <<std::endl; throw MyException();
         }
-        return new Declaration(type, range, name);
+        return Declaration(range, type, name,currentRangeList);
     }catch(exception& e){
         std::cout << e.what() <<std::endl; throw MyException();
     }
 }
 
 
-int* Parser::parse_type() {
+int Parser::parse_type() {
     //std::cout << "parsowanie type\n"<<flush;
     try {
         switch (lastSymbol) {
             case SymType::intsy :
                 accept(intsy);
-                return new int(0);
+                return 0;
             default :
                 accept(matrixsy);
-                return new int(1);
+                return 1;
         }
     }catch(exception& e){
         std::cout << e.what() <<std::endl; throw MyException();
     }
 }
 
-string* Parser::parse_identOnlyString() {
+string Parser::parse_identOnlyString() {
     //std::cout << "parsowanie identOnlyString\n"<<flush;
     try {
-        string* id = new string(scan->Spell());
+        string id = string(scan->Spell());
         accept(ident);
         return id;
+    }catch(exception& e){
+        std::cout << e.what() <<std::endl;
+        throw MyException();
+    }
+}
+
+int Parser::parse_intconst() {
+    //std::cout << "parsowanie intconst\n"<<flush;
+    try {
+        accept(intconst);
+        return scan->IntConst();
     }catch(exception& e){
         std::cout << e.what() <<std::endl; throw MyException();
     }
 }
 
-int* Parser::parse_intconst() {
-    //std::cout << "parsowanie intconst\n"<<flush;
-    try {
-        auto c = new int(scan->IntConst());
-        accept(intconst);
-        return c;
-    }catch(exception& e){
-    std::cout << e.what() <<std::endl; throw MyException();
-}
-}
 
-
-Block *Parser::getMainBlock() const {
+Block* Parser::getMainBlock()  {
     return mainBlock;
+}
+
+std::list<Block*> Parser::getBlockList(){
+    return blockList;
 }

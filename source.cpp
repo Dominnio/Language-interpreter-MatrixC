@@ -12,7 +12,7 @@ Source::Source(const char *file)
     strcpy(fn = new char[strlen(file)+1], file);
     fp = fopen(fn, "r");
     if(!fp){
-        cout<<"MatrixC: B£¥D FATALNY - nie mozna otworzyc pliku \"" << fn << "\"\n";
+        cout<<"MatrixC: BLAD FATALNY - nie mozna otworzyc pliku \"" << fn << "\"\n";
         exit(1);
     }
     cout<<"\nMatrixC, v.1.0, (c) 2018 (PW)\n";
@@ -36,27 +36,22 @@ void Source::Error(int ec, const TextPos&tp, const char*mt="", const char*at="")
 }
 int Source::NextChar()
 {
-    int r=1;
-    if(tpos.ln==0)          // jeli ¿adna linia nie by³a brana z pliku to we now¹ liniê (piêrsz¹)
-        r=NextLine();
-    else
-    if(!Line[tpos.cn])  // jeli to by³ ostatni znak z linni to we now¹ liniê
-        r=NextLine();
-    if(r)                   // jeli r = 0 tzn. nie ma ju¿ nowych linii, wpp we nastêpny znak z tej¿e linii
-        return Line[tpos.cn++];
+    int nextCharacter = fgetc(fp);
+    if(tpos.ln==0) {
+        tpos.ln++;
+        tpos.cn=0;
+        einline=0;
+    } else {
+        if (nextCharacter != EOF)
+            tpos.ln++;
+            tpos.cn=0;
+            einline=0;
+    }
+    if(nextCharacter != EOF) {
+        tpos.cn++;
+        return nextCharacter;
+    }
     else
         return EOF;
 }
-int Source::NextLine()
-{
-    if(!fgets(Line, MAXLIN, fp))    // jeli ostatnia brana linia to zwróæ 0 (nie ma ju¿ lini)
-        return 0; // EOF
-    tpos.ln++; // Nastêpny wiersz,
-    tpos.cn=0; // Ustaw pozycjê na przed pierwszym znakiem (jeszcze go nie pobrano)
-    while(Line[tpos.cn]==' ')       // jeli jest jaka spacja to dodaj pozycjê
-        tpos.cn++;
-    //if((options&NOLIST)==0 )    // wypisz wiersz, jeli jest zaznaczona odpowiednia opcja kompilatora
-    //PrntLine();
-    einline=0; // 0 blêdów w nowym wierszu
-    return 1;
-}
+

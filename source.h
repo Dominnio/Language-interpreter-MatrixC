@@ -29,8 +29,6 @@ class Source
     TextPos tpos; // Bie¿¹ca pozycja w pliku
     int etotal, einline; // Liczniki b³êdów:
     char Line[MAXLIN+1]; // Bufor bie¿¹cego wiersza
-    void PrntLine(); // Druk bie¿¹cego wiersza
-    int NextLine(); // Nastêpny wiersz do bufora
 public:
     Source(const char *file);
     int NextChar();
